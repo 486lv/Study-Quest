@@ -1,0 +1,8 @@
+node_modules
+dist
+out
+.next
+.DS_Store
+.env
+.env.local
+build
