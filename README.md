@@ -45,7 +45,8 @@
 
 ## 📸 预览 (Screenshots)
 
-*(此处建议你放两张截图：一张Timer界面，一张Habits界面)*
+<img width="1913" height="1209" alt="image" src="https://github.com/user-attachments/assets/9f7f27d3-e440-4df3-a195-2e910a575322" />
+
 
 ---
 
@@ -57,4 +58,5 @@
 
 <div align="center">
   <sub>Built with ❤️ for better productivity.</sub>
+
 </div># Study-Quest
