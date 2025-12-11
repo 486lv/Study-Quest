@@ -53,7 +53,9 @@
 ## 版本更新
 
 v.1.0.0 基本功能
+
 v.1.0.1 修复了计时器不能正常增加能量的bug，同时美化了页面，增加一些提示信息，增强用户使用
+
 ---
 
 ## 👨‍💻 Author
@@ -66,4 +68,5 @@ v.1.0.1 修复了计时器不能正常增加能量的bug，同时美化了页面
   <sub>Built with ❤️ for better productivity.</sub>
 
 </div># Study-Quest
+
 
