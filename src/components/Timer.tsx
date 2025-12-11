@@ -1,17 +1,15 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Square, CheckCircle, Tag, Settings2, X, Zap, Clock, Info } from 'lucide-react';
+import { Play, Pause, CheckCircle, Tag, Settings2, X, Zap, Clock, Info } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 
 const COLORS = ['#3b82f6', '#a855f7', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#64748b'];
-
 const MODES = [
   { id: 'countdown', label: '倒计时', icon: Clock },
   { id: 'stopwatch', label: '正计时', icon: Zap },
 ];
 
 export default function Timer() {
-  // 🟢 修复：这里补上了 setStrictMode
   const { addSession, strictMode, setStrictMode, customTags, addTag, removeTag } = useStore();
   
   const [mode, setMode] = useState<'countdown' | 'stopwatch'>('countdown');
@@ -21,10 +19,13 @@ export default function Timer() {
   const [currentTag, setCurrentTag] = useState(customTags[0]?.name || '默认');
   const [targetMinutes, setTargetMinutes] = useState(25);
   
+  // 核心时间记录 (Ref)
+  const startTimeRef = useRef<number>(0);     
+  const pausedTimeRef = useRef<number>(0);    
+  const lastPauseStartRef = useRef<number>(0);
   const initialTargetRef = useRef(25);
 
-  const [timeLeft, setTimeLeft] = useState(25 * 60);
-  const [elapsed, setElapsed] = useState(0); 
+  const [displayTime, setDisplayTime] = useState(25 * 60); 
 
   const [isTagEditing, setIsTagEditing] = useState(false);
   const [newTagName, setNewTagName] = useState('');
@@ -33,8 +34,10 @@ export default function Timer() {
   const intervalRef = useRef<any>(null);
 
   useEffect(() => {
-    if (mode === 'countdown' && !isActive) {
-      setTimeLeft(targetMinutes * 60);
+    if (!isActive && mode === 'countdown') {
+      setDisplayTime(targetMinutes * 60);
+    } else if (!isActive && mode === 'stopwatch') {
+      setDisplayTime(0);
     }
   }, [targetMinutes, mode, isActive]);
 
@@ -42,97 +45,130 @@ export default function Timer() {
     setIsActive(true);
     setIsPaused(false);
     initialTargetRef.current = targetMinutes;
+    startTimeRef.current = Date.now();
+    pausedTimeRef.current = 0;
+  };
+
+  const handlePause = () => {
+    setIsPaused(true);
+    lastPauseStartRef.current = Date.now();
+  };
+
+  const handleResume = () => {
+    setIsPaused(false);
+    const pauseDuration = Date.now() - lastPauseStartRef.current;
+    pausedTimeRef.current += pauseDuration;
   };
 
   useEffect(() => {
     if (isActive && !isPaused) {
       intervalRef.current = setInterval(() => {
+        const now = Date.now();
+        // 核心算法：使用物理时间计算
+        const realElapsedSeconds = Math.floor((now - startTimeRef.current - pausedTimeRef.current) / 1000);
+        
         if (mode === 'countdown') {
-          setTimeLeft(p => { 
-            if (p <= 1) { 
-              handleFinish(true); 
-              return 0; 
-            } 
-            return p - 1; 
-          });
+           const totalSeconds = initialTargetRef.current * 60;
+           const remaining = totalSeconds - realElapsedSeconds;
+           if (remaining <= 0) {
+             setDisplayTime(0);
+             handleFinish(true); 
+           } else {
+             setDisplayTime(remaining);
+           }
         } else if (mode === 'stopwatch') {
-          setElapsed(p => p + 1);
+           setDisplayTime(realElapsedSeconds);
         }
-      }, 1000);
+      }, 100); 
     }
     return () => clearInterval(intervalRef.current);
   }, [isActive, isPaused, mode]);
 
   const handleFinish = (isNaturalEnd = false) => {
     clearInterval(intervalRef.current);
-    const currentMode = mode;
-    let actualMinutes = 0;
+    
+    const now = Date.now();
+    let realElapsedSeconds = 0;
+    
+    if (isPaused) {
+       realElapsedSeconds = Math.floor((lastPauseStartRef.current - startTimeRef.current - pausedTimeRef.current) / 1000);
+    } else {
+       realElapsedSeconds = Math.floor((now - startTimeRef.current - pausedTimeRef.current) / 1000);
+    }
 
-    if (currentMode === 'countdown') {
-      if (isNaturalEnd) {
+    let actualMinutes = Math.floor(realElapsedSeconds / 60);
+    
+    if (mode === 'countdown' && isNaturalEnd) {
         actualMinutes = initialTargetRef.current;
-      } else {
-        const totalSeconds = initialTargetRef.current * 60;
-        const elapsedSeconds = totalSeconds - timeLeft;
-        actualMinutes = Math.floor(elapsedSeconds / 60);
-      }
-    } else if (currentMode === 'stopwatch') {
-        actualMinutes = Math.floor(elapsed / 60);
     }
 
     setIsActive(false); 
     setIsPaused(false);
 
+    // 校验小于1分钟
     if (actualMinutes < 1) {
         alert(`⚠️ 坚持时间不足 1 分钟 (${actualMinutes} min)，本次不计入成绩！`);
         resetTimerState();
         return;
     }
 
-    const isCompleted = currentMode === 'countdown' ? isNaturalEnd : true;
+    const isCompleted = mode === 'countdown' ? isNaturalEnd : true;
     let finalStatus: 'completed' | 'abandoned' = isCompleted ? 'completed' : 'abandoned';
 
-    if (!isNaturalEnd && strictMode && currentMode === 'countdown') {
+    if (!isNaturalEnd && strictMode && mode === 'countdown') {
         finalStatus = 'abandoned';
         alert(`🥀 严厉模式：未完成目标，记为枯萎。`);
     } else {
         const xpEarned = actualMinutes * 10;
         const energyEarned = actualMinutes;
-        const note = prompt(`🎉 结束！\n⏱️ 有效时长: ${actualMinutes} 分钟\n💎 获得: +${xpEarned} XP, +${energyEarned} 能量\n📝 写点心得？(可选)`);
-        
+
+        // 🟢 核心修改：先执行数据写入！(Fire First)
         addSession({ 
             id: Date.now().toString(), 
-            startTime: new Date().toISOString(), 
+            startTime: new Date(startTimeRef.current).toISOString(), 
             endTime: new Date().toISOString(), 
-            durationMinutes: actualMinutes,
+            durationMinutes: actualMinutes, 
             tag: currentTag, 
-            note: typeof note === 'string' ? note : '', 
+            note: '', // 移除了 prompt，防止报错
             status: finalStatus, 
-            mode: currentMode
+            mode: mode
         });
+
+        // 🟢 后弹窗：数据存完了再通知用户
+        // 使用 setTimeout 防止 alert 阻塞 UI 渲染
+        setTimeout(() => {
+            alert(`🎉 恭喜！专注结束！\n\n⏱️ 有效时长: ${actualMinutes} 分钟\n💎 获得: +${xpEarned} XP, +${energyEarned} 能量\n✅ 积分已到账！`);
+        }, 100);
     }
 
     resetTimerState();
   };
 
   const resetTimerState = () => {
-    setTimeLeft(targetMinutes * 60);
-    setElapsed(0);
+    if (mode === 'countdown') setDisplayTime(targetMinutes * 60);
+    else setDisplayTime(0);
+    startTimeRef.current = 0;
+    pausedTimeRef.current = 0;
   };
 
-  const formatTime = (sec: number) => { const m = Math.floor(sec / 60); const s = sec % 60; return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`; };
+  const formatTime = (sec: number) => { 
+    if(sec < 0) sec = 0;
+    const m = Math.floor(sec / 60); 
+    const s = sec % 60; 
+    return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`; 
+  };
+  
   const handleAddTag = () => { if (newTagName) { addTag(newTagName, newTagColor); setNewTagName(''); } };
 
   return (
-    <div className="h-full w-full flex items-center justify-center animate-in fade-in duration-500">
-      
+    <div className="h-full w-full flex items-center justify-center animate-in fade-in duration-500 relative">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 w-full max-w-6xl items-center">
         
         {/* 左侧圆环 */}
         <div className="flex flex-col items-center justify-center">
           <div className={`relative w-[400px] h-[400px] rounded-full border-8 flex flex-col items-center justify-center transition-all duration-700 ${isActive ? 'border-blue-500 bg-black/40 shadow-[0_0_80px_rgba(59,130,246,0.3)]' : 'border-white/5 bg-white/[0.02]'}`}>
             <div className="text-9xl font-mono font-bold text-white tracking-tighter drop-shadow-2xl tabular-nums leading-none">
-              {mode === 'countdown' ? formatTime(timeLeft) : formatTime(elapsed)}
+              {formatTime(displayTime)}
             </div>
             
             <div className="mt-6 flex flex-col items-center gap-2">
@@ -247,13 +283,13 @@ export default function Timer() {
                       </button>
                   ) : (
                       <>
-                        <button onClick={() => setIsPaused(!isPaused)} className="flex-1 py-5 bg-white/10 hover:bg-white/20 rounded-2xl font-bold text-white border border-white/10 flex items-center justify-center gap-2">
+                        <button onClick={() => { if(isPaused) handleResume(); else handlePause(); }} className="flex-1 py-5 bg-white/10 hover:bg-white/20 rounded-2xl font-bold text-white border border-white/10 flex items-center justify-center gap-2">
                           {isPaused ? <><Play fill="currentColor"/> 继续</> : <><Pause fill="currentColor"/> 暂停</>}
                         </button>
                         {isPaused && (
                           <>
-                            <button onClick={() => handleFinish(false)} className="px-6 bg-green-500/20 hover:bg-green-500 text-green-400 hover:text-white rounded-2xl border border-green-500/20 transition" title="提前完成 (按当前时间结算)"><CheckCircle size={24}/></button>
-                            <button onClick={() => { if(confirm('确定放弃？不计分哦。')) { resetTimerState(); setIsActive(false); setIsPaused(false); } }} className="px-6 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white rounded-2xl border border-red-500/20 transition"><X size={24} /></button>
+                            <button onClick={() => handleFinish(false)} className="px-6 bg-green-500/20 hover:bg-green-500 text-green-400 hover:text-white rounded-2xl border border-green-500/20 transition" title="结束专注 (结算积分)"><CheckCircle size={24}/></button>
+                            <button onClick={() => { if(confirm('确定放弃？不计分哦。')) { setIsActive(false); setIsPaused(false); resetTimerState(); } }} className="px-6 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white rounded-2xl border border-red-500/20 transition"><X size={24} /></button>
                           </>
                         )}
                       </>
