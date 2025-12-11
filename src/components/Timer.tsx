@@ -1,17 +1,17 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Square, CheckCircle, Tag, Settings2, X, Zap, Clock } from 'lucide-react';
+import { Play, Pause, Square, CheckCircle, Tag, Settings2, X, Zap, Clock, Info } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 
 const COLORS = ['#3b82f6', '#a855f7', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#64748b'];
 
-// 🟢 移除了补录模式
 const MODES = [
   { id: 'countdown', label: '倒计时', icon: Clock },
   { id: 'stopwatch', label: '正计时', icon: Zap },
 ];
 
 export default function Timer() {
+  // 🟢 修复：这里补上了 setStrictMode
   const { addSession, strictMode, setStrictMode, customTags, addTag, removeTag } = useStore();
   
   const [mode, setMode] = useState<'countdown' | 'stopwatch'>('countdown');
@@ -20,6 +20,9 @@ export default function Timer() {
   
   const [currentTag, setCurrentTag] = useState(customTags[0]?.name || '默认');
   const [targetMinutes, setTargetMinutes] = useState(25);
+  
+  const initialTargetRef = useRef(25);
+
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [elapsed, setElapsed] = useState(0); 
 
@@ -30,8 +33,16 @@ export default function Timer() {
   const intervalRef = useRef<any>(null);
 
   useEffect(() => {
-    if (mode === 'countdown' && !isActive) setTimeLeft(targetMinutes * 60);
+    if (mode === 'countdown' && !isActive) {
+      setTimeLeft(targetMinutes * 60);
+    }
   }, [targetMinutes, mode, isActive]);
+
+  const handleStart = () => {
+    setIsActive(true);
+    setIsPaused(false);
+    initialTargetRef.current = targetMinutes;
+  };
 
   useEffect(() => {
     if (isActive && !isPaused) {
@@ -39,7 +50,7 @@ export default function Timer() {
         if (mode === 'countdown') {
           setTimeLeft(p => { 
             if (p <= 1) { 
-              handleFinish(); 
+              handleFinish(true); 
               return 0; 
             } 
             return p - 1; 
@@ -52,41 +63,43 @@ export default function Timer() {
     return () => clearInterval(intervalRef.current);
   }, [isActive, isPaused, mode]);
 
-  const handleFinish = (isGiveUp = false) => {
+  const handleFinish = (isNaturalEnd = false) => {
     clearInterval(intervalRef.current);
-    setIsActive(false); 
-    setIsPaused(false);
-    
+    const currentMode = mode;
     let actualMinutes = 0;
 
-    if (mode === 'countdown') {
-        // 计算实际经过了多少秒
-        const totalSeconds = targetMinutes * 60;
+    if (currentMode === 'countdown') {
+      if (isNaturalEnd) {
+        actualMinutes = initialTargetRef.current;
+      } else {
+        const totalSeconds = initialTargetRef.current * 60;
         const elapsedSeconds = totalSeconds - timeLeft;
         actualMinutes = Math.floor(elapsedSeconds / 60);
-    } else if (mode === 'stopwatch') {
+      }
+    } else if (currentMode === 'stopwatch') {
         actualMinutes = Math.floor(elapsed / 60);
     }
 
-    // 规则：最少 1 分钟，否则归 0
-    if (actualMinutes < 1) {
-        actualMinutes = 0;
-    }
+    setIsActive(false); 
+    setIsPaused(false);
 
-    if (actualMinutes === 0) {
-        alert('⚠️ 坚持时间不足 1 分钟，本次不计入成绩！');
-        reset();
+    if (actualMinutes < 1) {
+        alert(`⚠️ 坚持时间不足 1 分钟 (${actualMinutes} min)，本次不计入成绩！`);
+        resetTimerState();
         return;
     }
 
-    const isCompleted = mode === 'countdown' ? (timeLeft <= 1) : true; 
+    const isCompleted = currentMode === 'countdown' ? isNaturalEnd : true;
     let finalStatus: 'completed' | 'abandoned' = isCompleted ? 'completed' : 'abandoned';
 
-    if (isGiveUp && strictMode && mode === 'countdown') {
+    if (!isNaturalEnd && strictMode && currentMode === 'countdown') {
         finalStatus = 'abandoned';
-        alert(`🥀 严厉模式：虽然坚持了 ${actualMinutes} 分钟，但任务未完成，记为枯萎。`);
+        alert(`🥀 严厉模式：未完成目标，记为枯萎。`);
     } else {
-        const note = prompt(`🎉 结束！\n⏱️ 实际有效时长: ${actualMinutes} 分钟\n📝 写点心得？(可选)`);
+        const xpEarned = actualMinutes * 10;
+        const energyEarned = actualMinutes;
+        const note = prompt(`🎉 结束！\n⏱️ 有效时长: ${actualMinutes} 分钟\n💎 获得: +${xpEarned} XP, +${energyEarned} 能量\n📝 写点心得？(可选)`);
+        
         addSession({ 
             id: Date.now().toString(), 
             startTime: new Date().toISOString(), 
@@ -95,14 +108,18 @@ export default function Timer() {
             tag: currentTag, 
             note: typeof note === 'string' ? note : '', 
             status: finalStatus, 
-            mode 
+            mode: currentMode
         });
     }
 
-    reset();
+    resetTimerState();
   };
 
-  const reset = () => { setTimeLeft(targetMinutes * 60); setElapsed(0); setIsPaused(false); setIsActive(false); };
+  const resetTimerState = () => {
+    setTimeLeft(targetMinutes * 60);
+    setElapsed(0);
+  };
+
   const formatTime = (sec: number) => { const m = Math.floor(sec / 60); const s = sec % 60; return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`; };
   const handleAddTag = () => { if (newTagName) { addTag(newTagName, newTagColor); setNewTagName(''); } };
 
@@ -128,12 +145,16 @@ export default function Timer() {
                )}
             </div>
           </div>
+
+          <div className="mt-8 flex items-center gap-2 text-xs text-white/40 bg-white/5 px-4 py-2 rounded-full border border-white/5">
+            <Info size={14} />
+            <span>奖励规则: 1 分钟 = <span className="text-blue-400 font-bold">10 XP</span> + <span className="text-yellow-400 font-bold">1 能量</span></span>
+          </div>
         </div>
 
         {/* 右侧控制台 */}
         <div className="bg-white/5 p-8 rounded-[32px] border border-white/10 shadow-2xl backdrop-blur-xl h-full max-h-[500px] flex flex-col overflow-y-auto custom-scrollbar">
           
-          {/* 模式切换 (只剩两个) */}
           <div className="flex gap-2 mb-8 bg-black/20 p-1.5 rounded-2xl shrink-0">
             {MODES.map(m => (
               <button key={m.id} onClick={() => { if(!isActive) setMode(m.id as any); }} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${mode === m.id ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
@@ -215,13 +236,13 @@ export default function Timer() {
 
             <div className="mt-auto pt-6">
               {!isActive ? (
-                <button onClick={() => { setIsActive(true); setIsPaused(false); }} className="w-full py-5 bg-white hover:bg-blue-50 text-black rounded-2xl font-bold text-xl shadow-[0_0_30px_rgba(255,255,255,0.15)] transition-transform hover:scale-[1.02] flex items-center justify-center gap-3">
+                <button onClick={handleStart} className="w-full py-5 bg-white hover:bg-blue-50 text-black rounded-2xl font-bold text-xl shadow-[0_0_30px_rgba(255,255,255,0.15)] transition-transform hover:scale-[1.02] flex items-center justify-center gap-3">
                   <Play size={24} fill="black"/> 开始专注
                 </button>
               ) : (
                 <div className="flex gap-4">
                   {mode === 'countdown' && strictMode ? (
-                      <button onClick={() => { if(confirm('⚠️ 严厉模式：放弃将直接记录失败！')) handleFinish(true); }} className="flex-1 py-5 bg-red-600 hover:bg-red-500 rounded-2xl font-bold text-white shadow-lg animate-pulse flex items-center justify-center gap-2">
+                      <button onClick={() => { if(confirm('⚠️ 严厉模式：放弃将直接记录失败！')) handleFinish(false); }} className="flex-1 py-5 bg-red-600 hover:bg-red-500 rounded-2xl font-bold text-white shadow-lg animate-pulse flex items-center justify-center gap-2">
                         <X size={24}/> 放弃 (Failure)
                       </button>
                   ) : (
@@ -231,8 +252,8 @@ export default function Timer() {
                         </button>
                         {isPaused && (
                           <>
-                            <button onClick={() => handleFinish(true)} className="px-6 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white rounded-2xl border border-red-500/20 transition"><Square size={24} fill="currentColor"/></button>
-                            <button onClick={() => handleFinish(false)} className="px-6 bg-green-500/20 hover:bg-green-500 text-green-400 hover:text-white rounded-2xl border border-green-500/20 transition"><CheckCircle size={24}/></button>
+                            <button onClick={() => handleFinish(false)} className="px-6 bg-green-500/20 hover:bg-green-500 text-green-400 hover:text-white rounded-2xl border border-green-500/20 transition" title="提前完成 (按当前时间结算)"><CheckCircle size={24}/></button>
+                            <button onClick={() => { if(confirm('确定放弃？不计分哦。')) { resetTimerState(); setIsActive(false); setIsPaused(false); } }} className="px-6 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white rounded-2xl border border-red-500/20 transition"><X size={24} /></button>
                           </>
                         )}
                       </>

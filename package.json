@@ -20,6 +20,12 @@
       "target": "nsis",
       "icon": "public/favicon.ico"
     },
+    "nsis": {
+      "oneClick": false, 
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": true,
+      "shortcutName": "Study Quest"
+    },
     "files": [
       "out/**/*",
       "main.js",

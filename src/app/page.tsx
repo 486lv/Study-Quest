@@ -80,7 +80,7 @@ export default function Home() {
             <NavButton tab="shop" icon={ShoppingBag} label="Shop 商城" />
           </nav>
 
-          <div className="mt-auto space-y-3 pb-8"> {/* 增加 pb-8 为 footer 留空间 */}
+          <div className="mt-auto space-y-3 pb-8"> 
             <div className="bg-gradient-to-r from-yellow-500/20 to-orange-600/20 p-3 rounded-xl border border-yellow-400/30 flex items-center justify-between backdrop-blur-md">
                <div className="flex items-center gap-2">
                  <div className="p-1.5 bg-yellow-400 rounded-lg text-black shadow-lg"><Zap size={14} fill="currentColor"/></div>
@@ -94,13 +94,12 @@ export default function Home() {
             </button>
           </div>
 
-          {/* 🟢 最底部署名 */}
           <div className="absolute bottom-3 left-0 w-full text-center text-[10px] text-white/20 font-bold tracking-widest uppercase pointer-events-none">
             Create by ice
           </div>
         </aside>
 
-        {/* 内容区 */}
+        {/* 🟢 内容区关键修改：使用 display (hidden) 切换，而不是销毁组件 */}
         <main className="flex-1 flex flex-col min-w-0 relative">
           <header className="h-20 flex items-center justify-between px-10 border-b border-white/5 shrink-0 bg-white/[0.01]">
             <h1 className="text-2xl font-bold text-white drop-shadow-lg tracking-tight">
@@ -113,19 +112,26 @@ export default function Home() {
               {activeTab === 'settings' && '偏好设置'}
             </h1>
             <div className="text-[10px] font-mono text-white/40 bg-white/5 px-2 py-1 rounded border border-white/5">
-              V15.0 Rhythm
+              V15.1 Stable
             </div>
           </header>
 
           <div className="flex-1 overflow-hidden p-8 relative">
             <div className="h-full w-full max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-              {activeTab === 'timer' && <Timer />}
+              
+              {/* 🟢 Timer 必须一直存在，只是看不见 */}
+              <div className={activeTab === 'timer' ? 'h-full block' : 'hidden'}>
+                <Timer />
+              </div>
+
+              {/* 其他组件可以懒加载，或者也用 hidden 保持状态 */}
               {activeTab === 'tasks' && <Tasks />}
               {activeTab === 'habits' && <Habits />}
               {activeTab === 'stats' && <StatsChart />}
               {activeTab === 'shop' && <Shop />}
               {activeTab === 'rank' && <Rank />}
               {activeTab === 'settings' && <Settings />}
+              
             </div>
           </div>
         </main>
