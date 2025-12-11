@@ -1,6 +1,6 @@
 # ⚔️ Study Quest (Rhythm Edition)
 
-> **Gamify Your Focus.** > 让专注像打怪升级一样上瘾。
+> **Gamify Your Focus.** 
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Version](https://img.shields.io/badge/version-1.0.0-green.svg)
@@ -50,6 +50,12 @@
 
 ---
 
+## 版本更新
+
+v.1.0.0 基本功能
+v.1.0.1 修复了计时器不能正常增加能量的bug，同时美化了页面，增加一些提示信息，增强用户使用
+---
+
 ## 👨‍💻 Author
 
 **Create by ice**
@@ -60,3 +66,4 @@
   <sub>Built with ❤️ for better productivity.</sub>
 
 </div># Study-Quest
+
