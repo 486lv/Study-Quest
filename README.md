@@ -27,7 +27,8 @@
 ### 🏛️ 隐形博物馆 (The Museum)
 * **隐藏关卡**：XP 达到 20,000 后，博物馆入口才会为你打开。
 * **成就展示**：陈列你所有的考古发现，记录挖掘时间与深度。
-## 商店
+
+### 🛍️ 商店
 * **自定义礼物**： 利用能量可以兑换你想要的礼物。
 ---
 
@@ -35,8 +36,13 @@
 
 * **🎯 硬核计时器**: 支持正计时/倒计时。严格积分算法，杜绝刷分。
 * **📅 习惯养成**: 每日打卡追踪，可视化的热力图与连胜 (Streak) 统计。
+  <img width="1394" height="818" alt="image" src="https://github.com/user-attachments/assets/938446c6-8f74-40fa-88a4-a09b522fe62f" />
+
 * **✅ 智能待办**: 动态优先级的任务清单，支持截止日期与重要性标记。
+  <img width="1421" height="538" alt="image" src="https://github.com/user-attachments/assets/6ae8fd93-0aa7-49e8-84d4-6995c78e8c6e" />
+
 * **🛍️ 能量商城**: 用专注赚取的能量兑换自定义奖励，实现自我激励闭环。
+<img width="1336" height="391" alt="image" src="https://github.com/user-attachments/assets/ef4989e5-00b3-473b-8186-97bd110ba4bd" />
 
 ---
 
@@ -73,3 +79,4 @@
 ## 👨‍💻 Author
 
 **Create by Ice**
+
