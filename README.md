@@ -1,6 +1,6 @@
 # ⚔️ Study Quest (Rhythm Edition)
 
-> **Gamify Your Focus.** > 让专注像打怪升级一样上瘾。
+> **Gamify Your Focus.** 
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Version](https://img.shields.io/badge/version-1.0.0-green.svg)
@@ -45,7 +45,16 @@
 
 ## 📸 预览 (Screenshots)
 
-*(此处建议你放两张截图：一张Timer界面，一张Habits界面)*
+<img width="1913" height="1209" alt="image" src="https://github.com/user-attachments/assets/9f7f27d3-e440-4df3-a195-2e910a575322" />
+
+
+---
+
+## 版本更新
+
+v.1.0.0 基本功能
+
+v.1.0.1 修复了计时器不能正常增加能量的bug，同时美化了页面，增加一些提示信息，增强用户使用
 
 ---
 
@@ -57,4 +66,7 @@
 
 <div align="center">
   <sub>Built with ❤️ for better productivity.</sub>
+
 </div># Study-Quest
+
+
