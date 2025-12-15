@@ -1,72 +1,75 @@
-# ⚔️ Study Quest (Rhythm Edition)
+# Study Quest (v2.0.0)
 
-> **Gamify Your Focus.** 
+> **"Focus is the only firewall against the Great Silence."**
+> **"专注，是抵御‘大寂静’的唯一防火墙。"**
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-1.0.0-green.svg)
-![Platform](https://img.shields.io/badge/platform-Windows-blueviolet)
+![Version](https://img.shields.io/badge/version-2.0.0-purple.svg)
+![Platform](https://img.shields.io/badge/platform-Windows/Mac-blueviolet)
 
-**Study Quest** 是一款结合了 RPG 元素的生产力工具。通过番茄钟专注、任务管理、习惯打卡，你可以获得经验值 (XP) 和能量，升级你的段位，并在商城中兑换现实奖励。
-
----
-
-## ✨ 核心功能 (Features)
-
-* **🎯 专注计时器 (Focus Timer)**: 支持倒计时与正计时，**严格积分算法**（不满1分钟不计分），支持 "严厉模式" (放弃即惩罚)。
-* **📅 习惯打卡 (Habit Tracker)**: 每日打卡追踪，可视化连胜记录 (Streak)，支持自定义习惯图标。
-* **✅ 任务清单 (Smart Tasks)**: 按重要程度自动排序的待办事项，支持截止日期提醒。
-* **📊 数据看板 (Statistics)**: 详尽的时间统计图表，分析你的精力分布。
-* **🏆 段位系统 (Rank System)**: 从青铜到永恒，11个段位等你挑战。
-* **🛍️ 奖励商城 (Reward Shop)**: 用专注赚取的能量兑换自定义奖励（如：看电影、喝奶茶）。
-* **🎨 高度自定义**: 支持更换背景壁纸、调节模糊度、自定义标签颜色。
+**Study Quest** 不仅仅是一个番茄钟。它是一款**叙事驱动的生产力**。
+在这个设定中，世界的时间已经停止，物理法则正在崩塌。你作为唯一的 **Operator (操作员)**，必须通过深度专注产生的算力来修复现实，并挖掘旧世界的碎片。
 
 ---
 
-## 🚀 下载与安装 (Download)
+## 🌌 2.0 核心玩法与特性
 
-请前往 [Releases 页面](这里填你的仓库Releases链接) 下载最新的 Windows 安装包。
+### 📖 碎片化叙事 (Story Mode)
+* **解密世界观**：随着你专注时间积累（XP 提升），你会收到来自系统底层、前任操作员的加密日志。
+* **沉浸式阅读**：复古 CRT 终端风格的阅读体验，带你探寻“大寂静”背后的真相。
+  <img width="1902" height="1158" alt="image" src="https://github.com/user-attachments/assets/c545cd45-b4cd-40c4-8424-deb4236a08aa" />
 
-1. 下载 `Study.Quest.Setup.1.0.0.exe`
-2. 双击安装
-3. 开始你的专注之旅！
+
+### 📦 赛博考古 (Cyber Archaeology)
+* **Roguelike 掉落**：每次长专注（>25分钟）结束，都有概率从数据废墟中挖出“旧世界文物”。
+* **稀有度系统**：普通、稀有、史诗、传说、**故障(Glitched)**，专注时间决定掉落的品质。
+
+### 🏛️ 隐形博物馆 (The Museum)
+* **隐藏关卡**：XP 达到 20,000 后，博物馆入口才会为你打开。
+* **成就展示**：陈列你所有的考古发现，记录挖掘时间与深度。
+## 商店
+* **自定义礼物**： 利用能量可以兑换你想要的礼物。
+---
+
+## ✨ 核心生产力功能 (Core Productivity)
+
+* **🎯 硬核计时器**: 支持正计时/倒计时。严格积分算法，杜绝刷分。
+* **📅 习惯养成**: 每日打卡追踪，可视化的热力图与连胜 (Streak) 统计。
+* **✅ 智能待办**: 动态优先级的任务清单，支持截止日期与重要性标记。
+* **🛍️ 能量商城**: 用专注赚取的能量兑换自定义奖励，实现自我激励闭环。
 
 ---
 
 ## 🛠️ 技术栈 (Tech Stack)
 
-* **Core**: React, Next.js 14 (App Router)
-* **Language**: TypeScript
-* **Styling**: Tailwind CSS
-* **State Management**: Zustand (Persist)
-* **Charts**: Recharts
-* **Desktop Wrapper**: Electron
+* **Core**: Next.js 14, React
+* **Desktop**: Electron (with IPC for robust file system storage)
+* **State Management**: Zustand (Multi-user Persistence)
+* **Styling**: Tailwind CSS, TypeScript
 
 ---
+## 预览（View）
 
-## 📸 预览 (Screenshots)
+六种主题：
+- 星际流体
+  <img width="1876" height="1130" alt="image" src="https://github.com/user-attachments/assets/956294da-a4f0-4c57-81b6-3a6a7f985a82" />
 
-<img width="1913" height="1209" alt="image" src="https://github.com/user-attachments/assets/9f7f27d3-e440-4df3-a195-2e910a575322" />
+- 像素勇者
+<img width="1925" height="1176" alt="image" src="https://github.com/user-attachments/assets/47eab46b-6520-4402-be27-d0f444a420d7" />
 
+- 赛博朋克
+  <img width="1924" height="1175" alt="image" src="https://github.com/user-attachments/assets/b8df7cd4-deb2-4c46-9481-f69bef94f74a" />
 
----
+- 胶片印象
+  <img width="1902" height="1152" alt="image" src="https://github.com/user-attachments/assets/c2ac364d-a0c6-4ab1-82f7-73a0bd3a3ec2" />
 
-## 版本更新
+- 手绘印象
+  <img width="1928" height="1190" alt="image" src="https://github.com/user-attachments/assets/c13d4299-5640-4368-8f03-db0066f0af28" />
 
-v.1.0.0 基本功能
+- 清新森系
+  <img width="1930" height="1187" alt="image" src="https://github.com/user-attachments/assets/c96a1be9-0849-45d7-9fe1-c45239a1cf0f" />
 
-v.1.0.1 修复了计时器不能正常增加能量的bug，同时美化了页面，增加一些提示信息，增强用户使用
-
----
 
 ## 👨‍💻 Author
 
-**Create by ice**
-
----
-
-<div align="center">
-  <sub>Built with ❤️ for better productivity.</sub>
-
-</div># Study-Quest
-
-
+**Create by Ice**
