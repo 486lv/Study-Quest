@@ -74,9 +74,21 @@
 
 - 清新森系
   <img width="1930" height="1187" alt="image" src="https://github.com/user-attachments/assets/c96a1be9-0849-45d7-9fe1-c45239a1cf0f" />
+---
+## TODO
+- 注册登录以及数据保存的问题解决
+- 剧情编写以及完善
+- 更多功能：倒数日
+- ℹ️ 关于我们 模块
+- 新手指南模块
+- 帮助中心 / 反馈，常见问题 Q&A。
+- 更多UI优化
+- 联机功能（尚难实现）
 
+---
 
 ## 👨‍💻 Author
 
 **Create by Ice**
+
 
