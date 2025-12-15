@@ -5,7 +5,7 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Version](https://img.shields.io/badge/version-2.0.0-purple.svg)
-![Platform](https://img.shields.io/badge/platform-Windows/Mac-blueviolet)
+![Platform](https://img.shields.io/badge/platform-Windows)
 
 **Study Quest** 不仅仅是一个番茄钟。它是一款**叙事驱动的生产力**。
 在这个设定中，世界的时间已经停止，物理法则正在崩塌。你作为唯一的 **Operator (操作员)**，必须通过深度专注产生的算力来修复现实，并挖掘旧世界的碎片。
@@ -90,5 +90,6 @@
 ## 👨‍💻 Author
 
 **Create by Ice**
+
 
 
