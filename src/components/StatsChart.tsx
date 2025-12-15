@@ -65,12 +65,12 @@ export default function StatsChart() {
     <div className="h-full flex flex-col gap-6 overflow-y-auto custom-scrollbar pr-2">
       
       {/* 顶部筛选 */}
-      <div className="flex bg-black/20 p-1 rounded-xl border border-white/5 shrink-0">
+      <div className="flex bg-surface p-1 rounded-xl border border-white/5 shrink-0">
         {['day', 'week', 'month', 'year', 'all'].map((r) => (
           <button 
             key={r}
             onClick={() => setRange(r as any)}
-            className={`flex-1 py-1.5 text-xs font-bold uppercase rounded-lg transition ${range === r ? 'bg-white/20 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+            className={`flex-1 py-1.5 text-xs font-bold uppercase rounded-lg transition ${range === r ? 'bg-white/20 text-text shadow' : 'text-text-muted hover:text-text'}`}
           >
             {r}
           </button>
@@ -79,20 +79,20 @@ export default function StatsChart() {
 
       {/* 概览卡片 */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
-           <div className="text-slate-400 text-xs uppercase font-bold mb-1 flex items-center gap-2"><Clock size={12}/> Total Time</div>
-           <div className="text-2xl font-bold text-white text-shadow">{(totalMinutes/60).toFixed(1)} <span className="text-sm font-normal text-slate-400">h</span></div>
+        <div className="bg-surface p-4 rounded-2xl border border-border">
+           <div className="text-text-muted text-xs uppercase font-bold mb-1 flex items-center gap-2"><Clock size={12}/> Total Time</div>
+           <div className="text-2xl font-bold text-text text-shadow">{(totalMinutes/60).toFixed(1)} <span className="text-sm font-normal text-text-muted">h</span></div>
         </div>
-        <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
-           <div className="text-slate-400 text-xs uppercase font-bold mb-1 flex items-center gap-2"><Activity size={12}/> Sessions</div>
+        <div className="bg-surface p-4 rounded-2xl border border-border">
+           <div className="text-text-muted text-xs uppercase font-bold mb-1 flex items-center gap-2"><Activity size={12}/> Sessions</div>
            <div className="text-2xl font-bold text-blue-400 text-shadow">{sessions.length}</div>
         </div>
       </div>
 
       {/* 图表区 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-48 shrink-0">
-        <div className="bg-white/5 p-4 rounded-2xl border border-white/10 flex flex-col">
-          <div className="text-xs font-bold text-slate-400 mb-2">Trend ({range})</div>
+        <div className="bg-surface p-4 rounded-2xl border border-border flex flex-col">
+          <div className="text-xs font-bold text-text-muted mb-2">Trend ({range})</div>
           <div className="flex-1">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
@@ -104,8 +104,8 @@ export default function StatsChart() {
           </div>
         </div>
         
-        <div className="bg-white/5 p-4 rounded-2xl border border-white/10 flex flex-col">
-          <div className="text-xs font-bold text-slate-400 mb-2">Distribution</div>
+        <div className="bg-surface p-4 rounded-2xl border border-border flex flex-col">
+          <div className="text-xs font-bold text-text-muted mb-2">Distribution</div>
           <div className="flex-1">
              <ResponsiveContainer width="100%" height="100%">
                <PieChart>
@@ -123,16 +123,16 @@ export default function StatsChart() {
       </div>
 
       {/* 详细记录 */}
-      <div className="bg-white/5 rounded-2xl border border-white/10 flex-1 overflow-hidden flex flex-col">
-        <div className="p-3 border-b border-white/5 bg-black/20 flex items-center gap-2 text-xs font-bold text-slate-400">
+      <div className="bg-surface rounded-2xl border border-border flex-1 overflow-hidden flex flex-col">
+        <div className="p-3 border-b border-white/5 bg-surface flex items-center gap-2 text-xs font-bold text-text-muted">
            <List size={14}/> Records
         </div>
         <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
            {sessions.slice().reverse().map(s => (
-             <div key={s.id} className="flex justify-between items-center p-3 hover:bg-white/5 rounded-xl transition border border-transparent hover:border-white/5">
+             <div key={s.id} className="flex justify-between items-center p-3 hover:bg-surface rounded-xl transition border border-transparent hover:border-white/5">
                <div>
                  <div className="flex items-center gap-2">
-                   <span className="text-sm text-white font-medium shadow-sm">{s.tag}</span>
+                   <span className="text-sm text-text font-medium shadow-sm">{s.tag}</span>
                    {s.note && <span className="text-[10px] bg-white/10 text-slate-300 px-1.5 rounded truncate max-w-[120px]">{s.note}</span>}
                  </div>
                  <div className="text-[10px] text-slate-500 mt-0.5">{new Date(s.startTime).toLocaleString()}</div>

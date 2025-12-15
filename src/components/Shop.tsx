@@ -26,11 +26,11 @@ export default function Shop() {
   return (
     <div className="h-full flex flex-col gap-6">
       <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
-        <h3 className="text-sm font-bold text-white mb-4 flex gap-2"><Plus size={16}/> 添加自定义奖励</h3>
+        <h3 className="text-sm font-bold text-text mb-4 flex gap-2"><Plus size={16}/> 添加自定义奖励</h3>
         <div className="flex gap-2">
-           <input value={name} onChange={e => setName(e.target.value)} placeholder="奖励名称 (如: 看电影)" className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white outline-none"/>
-           <input type="number" value={cost} onChange={e => setCost(e.target.value)} placeholder="价格" className="w-20 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white outline-none"/>
-           <button onClick={handleAdd} className="bg-blue-600 hover:bg-blue-500 px-4 rounded-lg text-white font-bold text-sm">添加</button>
+           <input value={name} onChange={e => setName(e.target.value)} placeholder="奖励名称 (如: 看电影)" className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-text outline-none"/>
+           <input type="number" value={cost} onChange={e => setCost(e.target.value)} placeholder="价格" className="w-20 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-text outline-none"/>
+           <button onClick={handleAdd} className="bg-primary hover:bg-blue-500 px-4 rounded-lg text-text font-bold text-sm">添加</button>
         </div>
       </div>
 
@@ -47,12 +47,12 @@ export default function Shop() {
                  <div className="flex items-center gap-3">
                    <div className="text-2xl bg-slate-900 w-10 h-10 flex items-center justify-center rounded-lg">{item.icon}</div>
                    <div>
-                     <div className="text-sm font-bold text-white">{item.name}</div>
+                     <div className="text-sm font-bold text-text">{item.name}</div>
                      <div className="text-xs text-yellow-500 font-bold">{item.cost} 能量</div>
                    </div>
                  </div>
                  <div className="flex gap-2">
-                   <button onClick={() => handleBuy(item)} className="px-3 py-1.5 bg-slate-700 hover:bg-blue-600 text-xs text-white rounded-lg transition">兑换</button>
+                   <button onClick={() => handleBuy(item)} className="px-3 py-1.5 bg-slate-700 hover:bg-primary text-xs text-text rounded-lg transition">兑换</button>
                    <button onClick={() => deleteShopItem(item.id)} className="p-1.5 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition"><Trash2 size={14}/></button>
                  </div>
                </div>

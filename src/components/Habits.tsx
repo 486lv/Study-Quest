@@ -28,17 +28,17 @@ export default function Habits() {
       {/* 头部固定区域 */}
       <div className="shrink-0">
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-white tracking-tight text-shadow flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-text tracking-tight text-shadow flex items-center gap-2">
             <CalendarCheck className="text-blue-400"/> 日常打卡
           </h2>
-          <p className="text-white/60 text-sm text-shadow">养成好习惯，每天坚持一点点。</p>
+          <p className="text-text/60 text-sm text-shadow">养成好习惯，每天坚持一点点。</p>
         </div>
 
         {/* 添加习惯区域 */}
-        <div className="bg-white/5 p-4 rounded-2xl border border-white/10 mb-6 flex flex-wrap gap-4 items-center shadow-lg">
+        <div className="bg-surface p-4 rounded-2xl border border-border mb-6 flex flex-wrap gap-4 items-center shadow-lg">
           <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar max-w-[200px] md:max-w-xs hide-scrollbar">
               {EMOJIS.map(emoji => (
-                  <button key={emoji} onClick={() => setSelectedIcon(emoji)} className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl transition flex-shrink-0 ${selectedIcon === emoji ? 'bg-blue-600 shadow-lg scale-110' : 'bg-black/20 hover:bg-white/10'}`}>
+                  <button key={emoji} onClick={() => setSelectedIcon(emoji)} className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl transition flex-shrink-0 ${selectedIcon === emoji ? 'bg-primary shadow-lg scale-110' : 'bg-surface hover:bg-white/10'}`}>
                       {emoji}
                   </button>
               ))}
@@ -47,9 +47,9 @@ export default function Habits() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="习惯名称 (如: 喝水)"
-              className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-blue-500 min-w-[120px]"
+              className="flex-1 bg-surface border border-border rounded-xl px-4 py-2 text-text outline-none focus:border-blue-500 min-w-[120px]"
           />
-          <button onClick={handleAdd} disabled={!newName} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl font-bold transition disabled:opacity-50 flex items-center gap-2 shrink-0">
+          <button onClick={handleAdd} disabled={!newName} className="bg-primary hover:bg-blue-500 text-text px-6 py-2 rounded-xl font-bold transition disabled:opacity-50 flex items-center gap-2 shrink-0">
               <Plus size={18}/> 添加
           </button>
         </div>
@@ -67,13 +67,13 @@ export default function Habits() {
                 className={`relative p-6 rounded-3xl border transition-all duration-300 group overflow-hidden ${
                   isCheckedToday 
                     ? 'bg-green-500/10 border-green-500/30 shadow-[0_0_20px_rgba(34,197,94,0.1)]' 
-                    : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+                    : 'bg-surface border-border hover:bg-white/10 hover:border-white/20'
                 }`}
               >
                 {/* 删除按钮 */}
                 <button 
                   onClick={(e) => { e.stopPropagation(); if(confirm(`确定删除 "${habit.name}" 吗？`)) deleteHabit(habit.id); }}
-                  className="absolute top-4 right-4 p-2 text-white/20 hover:text-red-400 hover:bg-white/10 rounded-lg transition opacity-0 group-hover:opacity-100 z-20 cursor-pointer"
+                  className="absolute top-4 right-4 p-2 text-text/20 hover:text-red-400 hover:bg-white/10 rounded-lg transition opacity-0 group-hover:opacity-100 z-20 cursor-pointer"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -85,7 +85,7 @@ export default function Habits() {
                 <div className="relative z-10 flex flex-col h-full justify-between gap-6">
                   <div>
                     <div className="flex justify-between items-start mb-4">
-                      <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-3xl shadow-inner">
+                      <div className="w-12 h-12 rounded-2xl bg-surface border border-border flex items-center justify-center text-3xl shadow-inner">
                         {habit.icon}
                       </div>
                       <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border ${isCheckedToday ? 'bg-green-500/20 text-green-300 border-green-500/20' : 'bg-orange-500/10 text-orange-300 border-orange-500/20'}`}>
@@ -94,8 +94,8 @@ export default function Habits() {
                       </div>
                     </div>
                     
-                    <h3 className="text-xl font-bold text-white mb-1 truncate">{habit.name}</h3>
-                    <p className="text-xs text-white/40">
+                    <h3 className="text-xl font-bold text-text mb-1 truncate">{habit.name}</h3>
+                    <p className="text-xs text-text/40">
                       {isCheckedToday ? '已完成' : '未打卡'}
                     </p>
                   </div>
@@ -123,7 +123,7 @@ export default function Habits() {
                       disabled={isCheckedToday}
                       className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 ${
                         isCheckedToday
-                          ? 'bg-green-500 text-white shadow-lg cursor-default'
+                          ? 'bg-green-500 text-text shadow-lg cursor-default'
                           : 'bg-white text-black hover:bg-blue-50 shadow-md hover:shadow-xl'
                       }`}
                     >
