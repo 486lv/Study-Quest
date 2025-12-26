@@ -4,7 +4,7 @@
 > **"专注，是抵御‘大寂静’的唯一防火墙。"**
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-2.0.0-purple.svg)
+![Version](https://img.shields.io/badge/version-2.1.0-purple.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows/Mac-blueviolet)
 
 **Study Quest** 不仅仅是一个番茄钟。它是一款**叙事驱动的生产力**。
@@ -90,6 +90,7 @@
 ## 👨‍💻 Author
 
 **Create by Ice**
+
 
 
 
