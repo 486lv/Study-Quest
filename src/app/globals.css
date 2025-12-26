@@ -54,8 +54,8 @@
   --surface: #ffffff;
   --primary: #059669;
   --primary-fg: #ffffff;
-  --text: #064e3b;
-  --text-muted: #34d399;
+  --text: #064e3b; /* 深绿色，确保清晰可读 */
+  --text-muted: #047857; /* 改为更深的绿色，提高可读性 */
   --border: #6ee7b7;
   --radius: 16px;
   --shadow: 0 10px 30px rgba(5, 150, 105, 0.15);
@@ -65,6 +65,19 @@
   /* 设置为：深绿背景 + 白色文字 -> 对比度极高，绝对清晰 */
   --selection-bg: #047857; /* 深翡翠绿 */
   --selection-text: #ffffff;
+}
+
+/* 确保森系主题下所有文字都清晰可见 */
+[data-theme='forest'] * {
+  color: inherit;
+}
+
+[data-theme='forest'] .text-text-muted {
+  color: #047857 !important; /* 强制使用深绿色，确保可读性 */
+}
+
+[data-theme='forest'] .text-text {
+  color: #064e3b !important; /* 确保主文字颜色 */
 }
 
 [data-theme='forest'] .rounded-theme {
@@ -156,23 +169,32 @@
   box-shadow: 2px 2px 0px 0px #000000;
 }
 
-/* --- F. ✏️ 手绘印象 (BW) --- */
+/* --- F. ✏️ 手绘印象 (BW) - 修复文字清晰度 --- */
 [data-theme='bw'] {
   --background: #fdfbf7;
   --surface: #ffffff;
-  --primary: #2d2d2d;
+  --primary: #1a1a1a; /* 改为纯黑色，提高对比度 */
   --primary-fg: #ffffff;
-  --text: #1a1a1a;
-  --text-muted: #57534e;
+  --text: #000000; /* 改为纯黑色，确保最大清晰度 */
+  --text-muted: #2d2d2d; /* 改为更深的灰色，提高可读性 */
   --border: #1a1a1a;
   --radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
   --shadow: 2px 2px 0px rgba(0,0,0,0.1);
   --font-body: var(--font-serif-sc);
 
   /* ✅ 手绘选中风格 */
-  /* 铅笔灰背景 + 白色文字 */
-  --selection-bg: #44403c;
+  /* 深灰背景 + 白色文字，保持黑白色调 */
+  --selection-bg: #1a1a1a; /* 纯黑色背景 */
   --selection-text: #ffffff;
+}
+
+/* 确保手绘主题下所有文字都清晰可见 */
+[data-theme='bw'] .text-text-muted {
+  color: #2d2d2d !important; /* 强制使用深灰色，确保可读性 */
+}
+
+[data-theme='bw'] .text-text {
+  color: #000000 !important; /* 确保主文字是纯黑色 */
 }
 
 [data-theme='bw'] .rounded-theme {
@@ -180,11 +202,91 @@
   background: #ffffff;
   border-radius: var(--radius);
   box-shadow: 3px 3px 0 rgba(0,0,0,0.1);
-  color: #1a1a1a;
+  color: #000000 !important; /* 强制使用黑色文字 */
   transform: none !important; /* 修正歪斜 */
 }
 [data-theme='bw'] .rounded-theme:hover {
   transform: scale(1.01) !important;
+}
+
+/* 确保手绘主题的背景色正确 - 全面覆盖所有可能的黑色背景 */
+[data-theme='bw'] {
+  background-color: #fdfbf7 !important;
+}
+
+[data-theme='bw'] .bg-background {
+  background-color: #fdfbf7 !important;
+}
+
+[data-theme='bw'] .bg-surface {
+  background-color: #ffffff !important;
+}
+
+/* 覆盖所有黑色半透明背景 - 使用属性选择器匹配Tailwind类 */
+[data-theme='bw'] [class*="bg-black"] {
+  background-color: rgba(253, 251, 247, 0.1) !important;
+}
+
+/* 特殊处理完全不透明的黑色背景 */
+[data-theme='bw'] [class*="bg-black"][class*="/90"],
+[data-theme='bw'] [class*="bg-black"][class*="/80"] {
+  background-color: rgba(253, 251, 247, 0.2) !important;
+}
+
+/* 覆盖侧边栏背景 */
+[data-theme='bw'] aside {
+  background-color: rgba(253, 251, 247, 0.3) !important;
+}
+
+/* 覆盖所有可能的深色背景类 */
+[data-theme='bw'] .bg-slate-950,
+[data-theme='bw'] .bg-slate-900,
+[data-theme='bw'] .bg-gray-900,
+[data-theme='bw'] .bg-black {
+  background-color: #fdfbf7 !important;
+}
+
+/* 确保手绘主题下的按钮和链接文字清晰 */
+[data-theme='bw'] button,
+[data-theme='bw'] a,
+[data-theme='bw'] input,
+[data-theme='bw'] textarea,
+[data-theme='bw'] select {
+  color: #000000 !important;
+}
+
+/* 手绘主题按钮选中状态 - 确保文字清晰可见 */
+[data-theme='bw'] button[class*="bg-primary"] {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+  border-color: #1a1a1a !important;
+}
+
+/* 手绘主题按钮文字颜色覆盖 - 选中状态 */
+[data-theme='bw'] button[class*="bg-primary"][class*="text-primary-fg"],
+[data-theme='bw'] button[class*="bg-primary"] {
+  color: #ffffff !important;
+}
+
+/* 手绘主题按钮未选中状态 */
+[data-theme='bw'] button:not([class*="bg-primary"]) {
+  background-color: transparent !important;
+  color: #000000 !important;
+  border-color: #1a1a1a !important;
+}
+
+/* 手绘主题 - 确保所有按钮文字在选中时都是白色 */
+[data-theme='bw'] button[class*="!bg-primary"] {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+/* 手绘主题下的次要文字也要清晰 */
+[data-theme='bw'] .text-slate-500,
+[data-theme='bw'] .text-slate-400,
+[data-theme='bw'] .text-gray-500,
+[data-theme='bw'] .text-gray-400 {
+  color: #2d2d2d !important;
 }
 
 /* =========================================

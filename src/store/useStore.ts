@@ -70,6 +70,49 @@ const getSafeFilename = (username: string) => {
   return `StudyQuest_${safeName}.json`;
 };
 
+// 辅助函数：手动保存当前状态到文件
+const saveCurrentState = async (getState: () => AppState) => {
+  const state = getState();
+  if (typeof window !== 'undefined' && (window as any).electronAPI && state.user.isLoggedIn && state.user.username) {
+    try {
+      // 只保存状态数据，不保存 actions
+      const stateToSave = JSON.stringify({ 
+        state: {
+          user: state.user,
+          energy: state.energy,
+          xp: state.xp,
+          theme: state.theme,
+          bgImage: state.bgImage,
+          blurLevel: state.blurLevel,
+          activeTab: state.activeTab,
+          strictMode: state.strictMode,
+          tasks: state.tasks,
+          sessions: state.sessions,
+          inventory: state.inventory,
+          artifacts: state.artifacts,
+          shopItems: state.shopItems,
+          habits: state.habits,
+          customTags: state.customTags,
+        }, 
+        version: 0 
+      });
+      const filename = getSafeFilename(state.user.username);
+      const result = await (window as any).electronAPI.saveData(filename, stateToSave);
+      if (result?.success) {
+        console.log(`✅ 用户数据已保存: ${filename}`);
+        return true;
+      } else {
+        console.error(`❌ 保存失败: ${result?.error || '未知错误'}`);
+        return false;
+      }
+    } catch (e) {
+      console.error("手动保存存档出错:", e);
+      return false;
+    }
+  }
+  return false;
+};
+
 // =========================================
 // 🔥 2. 自定义多用户文件存储系统 (核心修改)
 // =========================================
@@ -86,10 +129,19 @@ const multiUserStorage: StateStorage = {
       try {
         const stateData = JSON.parse(value);
         const username = stateData.state?.user?.username;
+        const isLoggedIn = stateData.state?.user?.isLoggedIn;
 
-        if (username && stateData.state?.user?.isLoggedIn) {
+        // 只有当用户已登录且有用户名时才保存
+        if (username && isLoggedIn) {
           const filename = getSafeFilename(username);
-          await (window as any).electronAPI.saveData(filename, value);
+          const result = await (window as any).electronAPI.saveData(filename, value);
+          if (result?.success) {
+            console.log(`✅ 用户数据已保存: ${filename}`);
+          } else {
+            console.error(`❌ 保存失败: ${result?.error || '未知错误'}`);
+          }
+        } else {
+          console.log('⏭️ 跳过保存：用户未登录或用户名为空');
         }
       } catch (e) {
         console.error("保存存档出错:", e);
@@ -162,7 +214,10 @@ export const useStore = create<AppState>()(
                     const savedJson = JSON.parse(savedDataStr);
                     if (savedJson.state) {
                         // 恢复存档数据，保留 activeTab 等当前状态，但确保用户状态是最新的
-                        set({ ...savedJson.state, user: { ...savedJson.state.user, isLoggedIn: true } });
+                        const restoredState = { ...savedJson.state, user: { ...savedJson.state.user, isLoggedIn: true } };
+                        set(restoredState);
+                        // 手动触发一次保存，确保数据被持久化
+                        await saveCurrentState(get);
                         return;
                     }
                 }
@@ -172,10 +227,14 @@ export const useStore = create<AppState>()(
         }
 
         // 没存档或加载失败：使用干净的初始默认状态
-        set({ 
+        const newState = { 
             ...INITIAL_STATE_DEFAULTS, // 确保所有数据都回到了干净的默认值
             user: newUser,
-        });
+        };
+        set(newState);
+
+        // 🔥 关键修复：新用户注册后立即保存数据
+        await saveCurrentState(get);
       },
 
       logout: () => {

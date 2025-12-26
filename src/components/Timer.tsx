@@ -303,21 +303,41 @@ export default function Timer() {
 
       case 'forest':
         return (
-          <div className="relative w-[320px] h-[320px] flex items-center justify-center animate-[float_6s_ease-in-out_infinite]">
-             <div className="absolute inset-0 rounded-full border-[6px] border-[#10b981] bg-[#ecfdf5] overflow-hidden shadow-2xl">
-                <div 
-                  className="absolute bottom-0 left-0 w-full transition-all duration-1000 ease-linear z-0"
-                  style={{ height: `${progress * 100}%` }}
-                >
-                   <div className="absolute bottom-0 w-[600px] h-[600px] bg-[#34d399] opacity-50 rounded-[40%]" style={{ left: '-140px', animation: 'wave-rotate 8s infinite linear', marginBottom: '-5%' }}></div>
-                   <div className="absolute bottom-0 w-[600px] h-[600px] bg-[#10b981] opacity-40 rounded-[35%]" style={{ left: '-140px', animation: 'wave-rotate 6s infinite linear reverse', marginBottom: '-2%' }}></div>
-                </div>
-             </div>
-             <div className="relative z-10 flex flex-col items-center justify-center bg-[#064e3b] px-12 py-8 rounded-3xl border-[3px] border-[#34d399] shadow-[0_15px_30px_rgba(6,78,59,0.4)] hover:scale-105 transition-transform cursor-pointer">
-                <Leaf size={42} className="text-[#4ade80] mb-2 drop-shadow-sm" fill="currentColor" />
-                <span className="text-7xl font-sans font-black text-white tracking-tight tabular-nums leading-none select-none">{formatTime(displayTime)}</span>
-                <span className="text-[10px] font-bold text-[#6ee7b7] mt-3 tracking-[0.2em] uppercase">Focusing</span>
-             </div>
+          <div className="relative w-[350px] h-[350px] flex items-center justify-center">
+            {/* 背景圆形 */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#ecfdf5] to-[#d1fae5] border-4 border-[#10b981] shadow-2xl"></div>
+            
+            {/* 进度环 */}
+            <svg className="absolute inset-0 w-full h-full -rotate-90" style={{ zIndex: 1 }}>
+              <circle 
+                cx="175" 
+                cy="175" 
+                r="165" 
+                fill="none" 
+                stroke="#6ee7b7" 
+                strokeWidth="8" 
+                opacity="0.3"
+              />
+              <circle 
+                cx="175" 
+                cy="175" 
+                r="165" 
+                fill="none" 
+                stroke="#10b981" 
+                strokeWidth="8" 
+                strokeDasharray={`${2 * Math.PI * 165}`}
+                strokeDashoffset={`${2 * Math.PI * 165 * (1 - progress)}`}
+                strokeLinecap="round"
+                className="transition-all duration-1000 ease-linear"
+              />
+            </svg>
+            
+            {/* 中心内容 */}
+            <div className="relative z-10 flex flex-col items-center justify-center">
+              <Leaf size={36} className="text-[#059669] mb-3 drop-shadow-sm" fill="currentColor" />
+              <span className="text-8xl font-sans font-black text-[#064e3b] tracking-tight tabular-nums leading-none select-none drop-shadow-lg">{formatTime(displayTime)}</span>
+              <span className="text-xs font-bold text-[#047857] mt-2 tracking-wider uppercase">Focusing</span>
+            </div>
           </div>
         );
 

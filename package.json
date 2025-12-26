@@ -29,6 +29,7 @@
     "files": [
       "out/**/*",
       "main.js",
+      "preload.js",
       "package.json"
     ],
     "asarUnpack": [
