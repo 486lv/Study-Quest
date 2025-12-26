@@ -1,4 +1,4 @@
-# Study Quest (v2.0.0)
+# Study Quest (v2.1.0)
 
 > **"Focus is the only firewall against the Great Silence."**
 > **"专注，是抵御‘大寂静’的唯一防火墙。"**
@@ -12,7 +12,7 @@
 
 ---
 
-## 🌌 2.0 核心玩法与特性
+## 🌌 2.1 核心玩法与特性
 
 ### 📖 碎片化叙事 (Story Mode)
 * **解密世界观**：随着你专注时间积累（XP 提升），你会收到来自系统底层、前任操作员的加密日志。
@@ -76,7 +76,7 @@
   <img width="1930" height="1187" alt="image" src="https://github.com/user-attachments/assets/c96a1be9-0849-45d7-9fe1-c45239a1cf0f" />
 ---
 ## TODO
-- 注册登录以及数据保存的问题解决
+- 注册登录以及数据保存的问题解决✅
 - 剧情编写以及完善
 - 更多功能：倒数日
 - ℹ️ 关于我们 模块
@@ -90,6 +90,7 @@
 ## 👨‍💻 Author
 
 **Create by Ice**
+
 
 
 
