@@ -1,7 +1,5 @@
 # Study Quest (v2.1.0)
 
-> **"Focus is the only firewall against the Great Silence."**
-> **"专注，是抵御‘大寂静’的唯一防火墙。"**
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Version](https://img.shields.io/badge/version-2.1.0-purple.svg)
@@ -90,6 +88,7 @@
 ## 👨‍💻 Author
 
 **Create by Ice**
+
 
 
 
