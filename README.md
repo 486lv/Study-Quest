@@ -1,97 +1,111 @@
-# Study Quest (v2.1.0)
-
+# Study Quest (v2.2.0)
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-2.1.0-purple.svg)
-![Platform](https://img.shields.io/badge/platform-Windows/Mac-blueviolet)
+![Version](https://img.shields.io/badge/version-2.2.0-purple.svg)
+![Platform](https://img.shields.io/badge/platform-Windows-blueviolet)
 
-**Study Quest** 不仅仅是一个番茄钟。它是一款**叙事驱动的生产力**。
-在这个设定中，世界的时间已经停止，物理法则正在崩塌。你作为唯一的 **Operator (操作员)**，必须通过深度专注产生的算力来修复现实，并挖掘旧世界的碎片。
-
----
-
-## 🌌 2.1 核心玩法与特性
-
-### 📖 碎片化叙事 (Story Mode)
-* **解密世界观**：随着你专注时间积累（XP 提升），你会收到来自系统底层、前任操作员的加密日志。
-* **沉浸式阅读**：复古 CRT 终端风格的阅读体验，带你探寻“大寂静”背后的真相。
-  <img width="1902" height="1158" alt="image" src="https://github.com/user-attachments/assets/c545cd45-b4cd-40c4-8424-deb4236a08aa" />
-
-
-### 📦 赛博考古 (Cyber Archaeology)
-* **Roguelike 掉落**：每次长专注（>25分钟）结束，都有概率从数据废墟中挖出“旧世界文物”。
-* **稀有度系统**：普通、稀有、史诗、传说、**故障(Glitched)**，专注时间决定掉落的品质。
-
-### 🏛️ 隐形博物馆 (The Museum)
-* **隐藏关卡**：XP 达到 20,000 后，博物馆入口才会为你打开。
-* **成就展示**：陈列你所有的考古发现，记录挖掘时间与深度。
-
-### 🛍️ 商店
-* **自定义礼物**： 利用能量可以兑换你想要的礼物。
----
-
-## ✨ 核心生产力功能 (Core Productivity)
-
-* **🎯 硬核计时器**: 支持正计时/倒计时。严格积分算法，杜绝刷分。
-* **📅 习惯养成**: 每日打卡追踪，可视化的热力图与连胜 (Streak) 统计。
-  <img width="1394" height="818" alt="image" src="https://github.com/user-attachments/assets/938446c6-8f74-40fa-88a4-a09b522fe62f" />
-
-* **✅ 智能待办**: 动态优先级的任务清单，支持截止日期与重要性标记。
-  <img width="1421" height="538" alt="image" src="https://github.com/user-attachments/assets/6ae8fd93-0aa7-49e8-84d4-6995c78e8c6e" />
-
-* **🛍️ 能量商城**: 用专注赚取的能量兑换自定义奖励，实现自我激励闭环。
-<img width="1336" height="391" alt="image" src="https://github.com/user-attachments/assets/ef4989e5-00b3-473b-8186-97bd110ba4bd" />
+Study Quest 是一个本地优先的专注成长应用：  
+一次专注结束后，稳定获得「奖励 + 剧情推进 + 彩蛋机会」，形成长期正反馈循环。
 
 ---
 
-## 🛠️ 技术栈 (Tech Stack)
+## v2.2.0 版本更新
 
-* **Core**: Next.js 14, React
-* **Desktop**: Electron (with IPC for robust file system storage)
-* **State Management**: Zustand (Multi-user Persistence)
-* **Styling**: Tailwind CSS, TypeScript
+- 本地单档免登录：冷启动直接进入主页，数据全本地持久化。
+- 专注页标签系统重构：支持新增 / 重命名 / 删除，新增后自动选中。
+- 商城系统重构：支持库存（无限/限量）与兑换记录（未使用/已使用）。
+- 剧情系统升级：段位-星级-章节推进，支持长期更新而非“一次性完结”。
+- 收藏系统重定位：改为专注结算触发的剧情彩蛋收藏，不再依赖通关主线。
+- 交互体验增强：新手引导、顶部状态摘要、专注页快捷时长、剧情/收藏 CTA 串联。
+- 主题可读性优化：修复部分主题下剧情与信息文本对比度不足问题。
 
 ---
-## 预览（View）
 
-六种主题：
-- 星际流体
-  <img width="1876" height="1130" alt="image" src="https://github.com/user-attachments/assets/956294da-a4f0-4c57-81b6-3a6a7f985a82" />
+## 核心功能
 
-- 像素勇者
-<img width="1925" height="1176" alt="image" src="https://github.com/user-attachments/assets/47eab46b-6520-4402-be27-d0f444a420d7" />
+### 1) 专注系统
+- 倒计时 / 正计时双模式
+- 专注标签管理（可编辑）
+- 严格模式（中断可判定放弃）
+- 连续天数与累计专注时长统计
 
-- 赛博朋克
-  <img width="1924" height="1175" alt="image" src="https://github.com/user-attachments/assets/b8df7cd4-deb2-4c46-9481-f69bef94f74a" />
+### 2) 剧情与段位
+- 主线 + 赛季 + 隐藏彩蛋结构
+- 段位进度递增（前快后慢）
+- 当前版本进度可见，后续版本可持续扩展
 
-- 胶片印象
-  <img width="1902" height="1152" alt="image" src="https://github.com/user-attachments/assets/c2ac364d-a0c6-4ab1-82f7-73a0bd3a3ec2" />
+### 3) 彩蛋收藏
+- 专注结算概率触发彩蛋
+- 彩蛋与剧情节点双向关联
+- 收藏页可回看详情并跳转剧情
 
-- 手绘印象
-  <img width="1928" height="1190" alt="image" src="https://github.com/user-attachments/assets/c13d4299-5640-4368-8f03-db0066f0af28" />
+### 4) 商城与奖励资产
+- 自定义奖励项
+- 能量兑换
+- 库存与自动下架
+- 兑换记录与状态追踪
 
-- 清新森系
-  <img width="1930" height="1187" alt="image" src="https://github.com/user-attachments/assets/c96a1be9-0849-45d7-9fe1-c45239a1cf0f" />
+### 5) 任务 / 习惯 / 数据
+- 待办任务管理
+- 习惯打卡与连续统计
+- 专注统计图表
+
 ---
-## TODO
-- 注册登录以及数据保存的问题解决✅
-- 剧情编写以及完善
-- 更多功能：倒数日
-- ℹ️ 关于我们 模块
-- 新手指南模块
-- 帮助中心 / 反馈，常见问题 Q&A。
-- 更多UI优化
-- 联机功能（尚难实现）
-- 目前仅支持windows平台，多平台扩展
+
+## 技术栈
+
+- Next.js 14 + React 18 + TypeScript
+- Electron + IPC（本地文件持久化）
+- Zustand（状态管理与持久化）
+- Tailwind CSS
+
 ---
 
-## 👨‍💻 Author
+## 本地开发
 
-**Create by Ice**
+```bash
+npm install
+npm run dev
+```
 
+---
 
+## 打包为 Windows 安装包（exe）
 
+```bash
+npm run clean:cache
+npm run dist
+```
 
+打包产物默认在：
 
+```text
+dist/
+```
 
+---
 
+## 发布流程（GitHub）
+
+```bash
+git add -A
+git commit -m "docs: update README for v2.2.0"
+git push origin main
+git tag -a v.2.2.0 -m "Release v.2.2.0"
+git push origin v.2.2.0
+```
+
+然后在 GitHub 创建 Release 页面并选择对应 tag。
+
+---
+
+## 说明
+
+- 当前版本为本地模式，不含联网账号系统。
+- 未来可扩展云同步与多端数据同步能力。
+
+---
+
+## Author
+
+Create by Ice
