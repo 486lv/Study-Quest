@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "dist": "next build && electron-builder"
+    "dist": "next build && electron-builder",
+    "clean:cache": "powershell -NoProfile -Command \"if (Test-Path .next\\\\cache) { Remove-Item .next\\\\cache -Recurse -Force }\""
   },
   "build": {
     "appId": "com.ice.studyquest",
@@ -18,7 +19,7 @@
     },
     "win": {
       "target": "nsis",
-      "icon": "public/favicon.ico"
+      "icon": "node_modules/app-builder-lib/templates/icons/proton-native/proton-native.ico"
     },
     "nsis": {
       "oneClick": false,

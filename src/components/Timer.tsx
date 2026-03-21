@@ -1,417 +1,448 @@
-'use client';
-import { useState, useEffect, useRef } from 'react';
-import { Play, Pause, X, Zap, Clock, Leaf, Gamepad2, Sparkles, Disc, Pencil, Plus, Trophy, Package } from 'lucide-react';
-import { useStore } from '@/store/useStore';
-// 引入考古系统逻辑和配置
-import { digForArtifact, Artifact, RARITY_CONFIG } from '@/data/artifactSystem';
+﻿'use client';
 
-// 设定剧情通关的阈值 (必须与 storyData.ts 中的最后一条剧情保持一致)
-const STORY_END_XP = 20000;
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowRight, Pause, Play, Plus, Save, Sparkles, Trash2, X } from 'lucide-react';
+import { useStore } from '@/store/useStore';
+import { Artifact, digForArtifact, RARITY_CONFIG } from '@/data/artifactSystem';
 
 export default function Timer() {
-  const { 
-    addSession, 
-    strictMode, 
-    customTags, 
-    theme, 
-    addTag, 
-    xp, // 获取当前 XP 用于判断是否通关
-    addArtifact // 获取添加文物的方法
+  const {
+    addSession,
+    strictMode,
+    customTags,
+    addTag,
+    renameTag,
+    removeTag,
+    storyProgress,
+    dailyProgress,
+    sessions,
+    focusCombo,
+    addArtifact,
+    hiddenStoryIds,
+    addHiddenStoryId,
+    setActiveTab,
+    theme,
+    onboarding,
+    setOnboardingStep,
   } = useStore();
-  
+
   const [mode, setMode] = useState<'countdown' | 'stopwatch'>('countdown');
+  const [targetMinutes, setTargetMinutes] = useState(25);
+  const [displaySeconds, setDisplaySeconds] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [currentTag, setCurrentTag] = useState(customTags[0]?.name || '默认');
-  const [targetMinutes, setTargetMinutes] = useState(25);
-  
-  // 🏆 结算奖励弹窗状态
+  const [currentTag, setCurrentTag] = useState(customTags[0]?.name || '学习');
+
+  const [showTagEditor, setShowTagEditor] = useState(false);
+  const [newTag, setNewTag] = useState('');
+  const [editingTag, setEditingTag] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState('');
+
   const [showReward, setShowReward] = useState(false);
   const [rewardData, setRewardData] = useState({ energy: 0, xp: 0 });
-  // 📦 新增：本次挖掘到的文物
   const [newArtifact, setNewArtifact] = useState<Artifact | null>(null);
 
-  const startTimeRef = useRef<number>(0);     
-  const pausedTimeRef = useRef<number>(0);    
-  const lastPauseStartRef = useRef<number>(0);
+  const startRef = useRef(0);
+  const pausedRef = useRef(0);
+  const pauseStartRef = useRef(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const initialTargetRef = useRef(25);
-  const intervalRef = useRef<any>(null);
-
-  const [displayTime, setDisplayTime] = useState(25 * 60); 
 
   useEffect(() => {
-    if (!isActive) {
-      setDisplayTime(mode === 'countdown' ? targetMinutes * 60 : 0);
-    }
+    if (!isActive) setDisplaySeconds(mode === 'countdown' ? targetMinutes * 60 : 0);
   }, [targetMinutes, mode, isActive]);
 
-  const handleStart = () => { 
-    setIsActive(true); 
-    setIsPaused(false); 
-    initialTargetRef.current = targetMinutes; 
-    startTimeRef.current = Date.now(); 
-    pausedTimeRef.current = 0; 
-  };
-  
-  const handlePause = () => { setIsPaused(true); lastPauseStartRef.current = Date.now(); };
-  const handleResume = () => { setIsPaused(false); pausedTimeRef.current += (Date.now() - lastPauseStartRef.current); };
-
-  // 添加新标签
-  const handleAddTag = () => {
-    const newTag = window.prompt("🏷️ 请输入新标签名称：");
-    if (newTag && newTag.trim() !== "") {
-      if (addTag) {
-        addTag(newTag);
-        setCurrentTag(newTag);
-      } else {
-        alert("⚠️ 请先更新 useStore.ts 添加 addTag 方法！");
-      }
-    }
-  };
+  useEffect(() => {
+    if (!customTags.find((t) => t.name === currentTag) && customTags[0]) setCurrentTag(customTags[0].name);
+  }, [customTags, currentTag]);
 
   useEffect(() => {
-    if (isActive && !isPaused) {
-      intervalRef.current = setInterval(() => {
-        const now = Date.now();
-        const elapsed = Math.floor((now - startTimeRef.current - pausedTimeRef.current) / 1000);
-        if (mode === 'countdown') {
-           const remaining = (initialTargetRef.current * 60) - elapsed;
-           if (remaining <= 0) { setDisplayTime(0); handleFinish(true); } else { setDisplayTime(remaining); }
-        } else { setDisplayTime(elapsed); }
-      }, 100); 
+    if (!(isActive && !isPaused)) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      return;
     }
-    return () => clearInterval(intervalRef.current);
+
+    intervalRef.current = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startRef.current - pausedRef.current) / 1000);
+      if (mode === 'countdown') {
+        const remaining = initialTargetRef.current * 60 - elapsed;
+        if (remaining <= 0) {
+          setDisplaySeconds(0);
+          finishSession(true);
+        } else {
+          setDisplaySeconds(remaining);
+        }
+      } else {
+        setDisplaySeconds(elapsed);
+      }
+    }, 200);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [isActive, isPaused, mode]);
 
-  // ==========================================
-  // 核心结算逻辑
-  // ==========================================
-  const handleFinish = (isNaturalEnd = false) => {
-    clearInterval(intervalRef.current);
-    const now = Date.now();
-    const elapsed = isPaused ? Math.floor((lastPauseStartRef.current - startTimeRef.current - pausedTimeRef.current) / 1000) : Math.floor((now - startTimeRef.current - pausedTimeRef.current) / 1000);
+  const handleStart = () => {
+    setIsActive(true);
+    setIsPaused(false);
+    startRef.current = Date.now();
+    pausedRef.current = 0;
+    initialTargetRef.current = targetMinutes;
+    if (!onboarding.completed && onboarding.step === 1) setOnboardingStep(2);
+  };
+
+  const handlePause = () => {
+    setIsPaused(true);
+    pauseStartRef.current = Date.now();
+  };
+
+  const handleResume = () => {
+    setIsPaused(false);
+    pausedRef.current += Date.now() - pauseStartRef.current;
+  };
+
+  const finishSession = (isNaturalEnd: boolean) => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    const elapsed = isPaused
+      ? Math.floor((pauseStartRef.current - startRef.current - pausedRef.current) / 1000)
+      : Math.floor((Date.now() - startRef.current - pausedRef.current) / 1000);
+
     let actualMinutes = Math.floor(elapsed / 60);
     if (mode === 'countdown' && isNaturalEnd) actualMinutes = initialTargetRef.current;
-    // //测试
-    // actualMinutes = 100; // 强制设为 100 分钟，确保掉落率 100% 且大概率出传说
 
-    setIsActive(false); setIsPaused(false);
-    
-    // 如果时间太短
-    if (actualMinutes < 1) { 
-      alert(`⚠️ 时间太短，无法获得能量`); 
-      resetTimerState(); 
-      return; 
+    setIsActive(false);
+    setIsPaused(false);
+
+    if (actualMinutes < 1) {
+      resetTimer();
+      return;
     }
-    
-    // ✅ 触发奖励弹窗
-    if (isNaturalEnd || mode === 'stopwatch') {
-      const baseEnergy = actualMinutes * 1;
-      const baseXp = actualMinutes * 10;
-      setRewardData({ energy: baseEnergy, xp: baseXp });
 
-      // 🔥🔥🔥 核心判断：只有 XP 达到剧情通关阈值，才触发考古 🔥🔥🔥
-      if (xp >= STORY_END_XP) {
-        const foundItem = digForArtifact(actualMinutes);
-        if (foundItem) {
-          setNewArtifact(foundItem);
-          addArtifact(foundItem); // 存入 Store
-        } else {
-          setNewArtifact(null);
-        }
+    const completed = !(mode === 'countdown' && !isNaturalEnd && strictMode);
+
+    addSession({
+      id: Date.now().toString(),
+      startTime: new Date(startRef.current).toISOString(),
+      endTime: new Date().toISOString(),
+      durationMinutes: actualMinutes,
+      tag: currentTag,
+      note: '',
+      status: completed ? 'completed' : 'abandoned',
+      mode,
+    });
+
+    if (completed) {
+      setRewardData({ energy: actualMinutes, xp: actualMinutes * 10 });
+
+      const found = digForArtifact({
+        focusMinutes: actualMinutes,
+        combo: focusCombo,
+        unlockedEggIds: hiddenStoryIds,
+        rank: storyProgress.storyRank,
+      });
+
+      if (found) {
+        addArtifact(found);
+        addHiddenStoryId(found.storyId);
+        setNewArtifact(found);
       } else {
         setNewArtifact(null);
       }
 
       setShowReward(true);
-      // 4秒后自动关闭，给用户多一点时间看文物
-      setTimeout(() => setShowReward(false), 4000);
+      if (!onboarding.completed && onboarding.step === 2) setOnboardingStep(3);
+      setTimeout(() => setShowReward(false), 5000);
     }
 
-    addSession({ 
-      id: Date.now().toString(), 
-      startTime: new Date(startTimeRef.current).toISOString(), 
-      endTime: new Date().toISOString(), 
-      durationMinutes: actualMinutes, 
-      tag: currentTag, 
-      note: '', 
-      status: (mode==='countdown' && !isNaturalEnd && strictMode) ? 'abandoned' : 'completed', 
-      mode 
-    });
-    resetTimerState();
+    resetTimer();
   };
 
-  const resetTimerState = () => { setDisplayTime(mode === 'countdown' ? targetMinutes * 60 : 0); startTimeRef.current = 0; pausedTimeRef.current = 0; };
-  const formatTime = (sec: number) => { const m = Math.floor(Math.max(0, sec) / 60); const s = Math.max(0, sec) % 60; return `${m<10?'0':''}${m}:${s<10?'0':''}${s}`; };
-  
-  const totalDuration = isActive 
-    ? initialTargetRef.current * 60 
-    : targetMinutes * 60;
-  const rawProgress = mode === 'countdown' 
-    ? (totalDuration > 0 ? displayTime / totalDuration : 0)
-    : 1;
-  const progress = Math.min(1, Math.max(0, rawProgress));
+  const resetTimer = () => {
+    startRef.current = 0;
+    pausedRef.current = 0;
+    setDisplaySeconds(mode === 'countdown' ? targetMinutes * 60 : 0);
+  };
 
-  // ==========================================
-  // 奖励弹窗组件 (Reward Overlay)
-  // ==========================================
-  const RewardOverlay = () => (
-    <div className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none animate-in fade-in zoom-in duration-300">
-      <div className="bg-black/90 backdrop-blur-md border-2 border-yellow-400 p-8 rounded-2xl shadow-[0_0_50px_rgba(250,204,21,0.5)] flex flex-col items-center gap-4 text-center animate-bounce-subtle min-w-[320px]">
-        
-        {/* 基础奖励 */}
-        <div className="flex flex-col items-center gap-2">
-          <Trophy size={48} className="text-yellow-400 animate-pulse" />
-          <div>
-            <h2 className="text-2xl font-black text-white mb-1">SESSION COMPLETE!</h2>
-            <p className="text-gray-400 text-xs uppercase tracking-widest">Focus Rewards</p>
-          </div>
-          <div className="flex gap-8 mt-2">
-            <div className="flex flex-col items-center">
-              <span className="text-3xl font-black text-yellow-400 drop-shadow-md">+{rewardData.energy}</span>
-              <span className="text-[10px] font-bold text-yellow-400/80 uppercase">Energy</span>
-            </div>
-            <div className="w-[1px] bg-white/20"></div>
-            <div className="flex flex-col items-center">
-              <span className="text-3xl font-black text-blue-400 drop-shadow-md">+{rewardData.xp}</span>
-              <span className="text-[10px] font-bold text-blue-400/80 uppercase">XP</span>
-            </div>
-          </div>
-        </div>
+  const fmt = (sec: number) => {
+    const m = Math.floor(Math.max(0, sec) / 60);
+    const s = Math.max(0, sec) % 60;
+    return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+  };
 
-        {/* 📦 考古掉落 (只有挖到才显示) */}
-        {newArtifact && (
-          <div className="mt-4 pt-4 border-t border-white/10 w-full animate-in slide-in-from-bottom-4 duration-700 delay-150">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Sparkles size={14} className="text-purple-400" />
-              <span className="text-xs font-bold text-purple-300 uppercase tracking-widest">Endgame Discovery</span>
-              <Sparkles size={14} className="text-purple-400" />
-            </div>
-            
-            <div className={`relative bg-white/5 p-4 rounded-xl flex items-center gap-4 border overflow-hidden group transition-transform hover:scale-105`}
-                 style={{ borderColor: RARITY_CONFIG[newArtifact.rarity].color }}>
-              
-              {/* 背景光效 */}
-              <div className="absolute inset-0 opacity-10" style={{ backgroundColor: RARITY_CONFIG[newArtifact.rarity].color }}></div>
-              
-              <div className="text-3xl relative z-10 drop-shadow-md">📦</div>
-              <div className="text-left relative z-10 flex-1 min-w-0">
-                <div className="text-sm font-bold truncate" style={{ color: RARITY_CONFIG[newArtifact.rarity].color }}>
-                  {newArtifact.name}
-                </div>
-                <div className="text-[10px] text-gray-400 truncate opacity-80">
-                  {newArtifact.description}
-                </div>
-                <div className="mt-1 inline-block px-1.5 py-0.5 rounded text-[8px] font-bold bg-black/50 uppercase tracking-wider text-white/70">
-                   {RARITY_CONFIG[newArtifact.rarity].label}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-      
-      {/* 粒子特效模拟 */}
-      <div className="absolute inset-0 overflow-hidden">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="absolute text-2xl animate-[float_2s_ease-out_infinite]" style={{
-            left: `${20 + Math.random() * 60}%`, 
-            top: '60%', 
-            animationDelay: `${Math.random() * 0.5}s`,
-            opacity: 0
-          }}>✨</div>
-        ))}
-      </div>
-    </div>
+  const nearUpgradeSessions = Math.max(1, Math.ceil(storyProgress.rankNeed / 250));
+  const totalFocusedMinutes = useMemo(
+    () =>
+      sessions
+        .filter((s) => s.status === 'completed')
+        .reduce((sum, s) => sum + (Number(s.durationMinutes) || 0), 0),
+    [sessions]
   );
+  const totalHours = Math.floor(totalFocusedMinutes / 60);
+  const remainMinutes = totalFocusedMinutes % 60;
+  const presetMinutes = [15, 25, 45, 60];
+
+  const addTagInline = () => {
+    const safe = newTag.trim();
+    if (!safe) return;
+    addTag(safe);
+    setCurrentTag(safe);
+    setNewTag('');
+  };
+
+  const saveRename = (oldName: string) => {
+    const safe = editingValue.trim();
+    if (!safe) return;
+    renameTag(oldName, safe);
+    if (currentTag === oldName) setCurrentTag(safe);
+    setEditingTag(null);
+    setEditingValue('');
+  };
+
+  const deleteTag = (name: string) => {
+    removeTag(name);
+    if (currentTag === name) {
+      const fallback = customTags.find((t) => t.name !== name)?.name;
+      if (fallback) setCurrentTag(fallback);
+    }
+  };
 
   const renderTimerFace = () => {
-    switch (theme) {
-      case 'default':
-        const circumference = 1068;
-        const dashOffset = circumference * (1 - progress); 
-        return (
-          <div className="relative w-[350px] h-[350px] flex items-center justify-center">
-            <div className={`absolute inset-0 rounded-full bg-indigo-600 blur-[60px] opacity-40 ${isActive && !isPaused ? 'animate-pulse' : ''}`}></div>
-            <div className="absolute w-[90%] h-[90%] rounded-full bg-[#1e293b] border border-indigo-400/30 flex items-center justify-center shadow-[inset_0_0_40px_rgba(0,0,0,0.5)] z-10">
-               <Sparkles className="absolute top-10 right-14 text-white/20 w-6 h-6 animate-pulse"/>
-               <span className="text-8xl font-black tracking-tighter text-white z-20 drop-shadow-lg tabular-nums select-none">{formatTime(displayTime)}</span>
-            </div>
-            <svg className="absolute inset-0 w-full h-full -rotate-90 scale-x-[-1] z-30 pointer-events-none">
-               <circle cx="175" cy="175" r="170" fill="none" stroke="#334155" strokeWidth="3" opacity="0.3"/>
-               <circle cx="175" cy="175" r="170" fill="none" stroke="#6366f1" strokeWidth="6" strokeDasharray={circumference} strokeDashoffset={dashOffset} strokeLinecap="round" className="transition-all duration-1000 ease-linear"/>
+    const baseText = (
+      <div className="text-center z-20">
+        <div className="text-7xl font-black tracking-tight tabular-nums text-text">{fmt(displaySeconds)}</div>
+        <div className="mt-2 text-xs text-text-muted">{mode === 'countdown' ? '倒计时模式' : '正计时模式'}</div>
+        <div className="mt-4 text-sm text-text-muted">当前标签: <span className="font-bold text-text">{currentTag}</span></div>
+      </div>
+    );
+
+    if (theme === 'film') {
+      return (
+        <div className="relative w-[380px] h-[380px] flex items-center justify-center overflow-visible">
+          <div className="absolute w-[346px] h-[346px] rounded-full bg-[radial-gradient(circle_at_35%_25%,#4f4436_0%,#2a231b_45%,#1a1510_100%)] border border-[#5c4d3a] shadow-[inset_0_0_60px_rgba(0,0,0,0.55)]">
+            {[...Array(24)].map((_, i) => (
+              <span
+                key={i}
+                className="absolute left-1/2 top-1/2 w-[8px] h-[24px] rounded-sm bg-[#0f0c09] border border-[#3d3328]"
+                style={{ transform: `translate(-50%, -50%) rotate(${i * 15}deg) translateY(-156px)` }}
+              />
+            ))}
+          </div>
+          <div className="absolute w-[246px] h-[246px] rounded-full border border-[#79664f] bg-[radial-gradient(circle,#2d241a_0%,#19140f_90%)] shadow-[inset_0_0_24px_rgba(0,0,0,0.45)]">
+            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 246 246">
+              {[...Array(6)].map((_, i) => (
+                <line
+                  key={i}
+                  x1="123"
+                  y1="123"
+                  x2="123"
+                  y2="26"
+                  stroke="#8f795d"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  transform={`rotate(${i * 60} 123 123)`}
+                />
+              ))}
             </svg>
           </div>
-        );
-
-      case 'cyberpunk':
-        return (
-          <div className="relative w-[350px] h-[350px] flex items-center justify-center">
-             <div className={`absolute inset-0 rounded-full border border-[#00ff41]/50 ${isActive ? 'animate-[spin_10s_linear_infinite]' : ''}`}></div>
-             <svg className="absolute w-full h-full animate-[spin_30s_linear_infinite]" viewBox="0 0 300 300">
-                <path id="circlePath" d="M 150, 150 m -120, 0 a 120,120 0 1,1 240,0 a 120,120 0 1,1 -240,0" fill="transparent" />
-                <text fill="#00ff41" fontSize="12" letterSpacing="4" opacity="0.8" fontWeight="bold"><textPath href="#circlePath">1011010100101011101010010101001010101110101001</textPath></text>
-             </svg>
-             <div className="z-10 bg-black px-8 py-4 border-2 border-[#00ff41] shadow-[0_0_20px_#00ff41] hover:scale-105 transition-transform group cursor-pointer hover:shadow-[0_0_40px_#00ff41]">
-                <span className="text-7xl font-mono text-[#00ff41] font-black tracking-widest drop-shadow-none select-none">{formatTime(displayTime)}</span>
-             </div>
-          </div>
-        );
-
-      case 'pixel':
-        return (
-          <div className="relative w-[340px] p-6 bg-white border-4 border-black shadow-[8px_8px_0px_#000] flex flex-col items-center hover:translate-y-1 hover:shadow-[4px_4px_0px_#000] transition-all cursor-pointer">
-             <div className="w-full bg-[#ff3d3d] text-white text-center py-1 font-pixel text-xs mb-4 border-b-4 border-black font-bold">PLAYER 1 START</div>
-             <div className="flex items-center gap-2 mb-4">
-               <Gamepad2 size={32} className="text-blue-600"/> 
-               <span className="text-6xl font-pixel text-black font-black tracking-widest select-none">{formatTime(displayTime)}</span>
-             </div>
-             <div className="w-full h-8 border-4 border-black p-1 relative bg-gray-200 box-border">
-                <div className="h-full bg-yellow-400 border-r-4 border-black transition-all duration-1000 ease-linear" style={{ width: `${progress * 100}%`, maxWidth: '100%' }}></div>
-                <div className="absolute inset-0 flex pointer-events-none"><div className="flex-1 border-r-2 border-black/10 last:border-0 h-full"></div><div className="flex-1 border-r-2 border-black/10 last:border-0 h-full"></div><div className="flex-1 border-r-2 border-black/10 last:border-0 h-full"></div><div className="flex-1 border-r-2 border-black/10 last:border-0 h-full"></div></div>
-             </div>
-          </div>
-        );
-
-      case 'film':
-        return (
-          <div className="relative w-[360px] h-[360px] flex items-center justify-center">
-             <div className={`relative w-full h-full rounded-full bg-[#18181b] border-8 border-[#27272a] flex items-center justify-center overflow-hidden transition-transform duration-[2s] ${isActive && !isPaused ? 'animate-[spin_4s_linear_infinite]' : ''}`}>
-                <div className="absolute inset-0 rounded-full" style={{background: 'repeating-radial-gradient(#18181b 0, #18181b 2px, #404040 3px, #18181b 4px)'}}></div>
-                <div className="absolute w-[120px] h-[120px] bg-[#f59e0b] rounded-full border-4 border-black flex items-center justify-center shadow-lg"><Disc size={40} className="text-black opacity-80"/></div>
-             </div>
-             <div className="absolute bottom-6 bg-[#292524] px-6 py-2 border border-[#57534e] shadow-2xl rounded rotate-[-2deg] hover:rotate-0 transition-transform duration-300">
-                <span className="text-6xl font-serif text-[#f5f5f4] tabular-nums font-black drop-shadow-md select-none">{formatTime(displayTime)}</span>
-             </div>
-          </div>
-        );
-
-      case 'bw':
-        return (
-          <div className="relative w-[320px] h-[320px] flex items-center justify-center">
-             <div className="absolute inset-0 border-4 border-[#2d2d2d] opacity-60" style={{borderRadius: '60% 40% 30% 70% / 60% 30% 70% 40%'}}></div>
-             <div className="absolute inset-2 border-2 border-[#2d2d2d] opacity-40" style={{borderRadius: '30% 60% 70% 40% / 50% 60% 30% 60%'}}></div>
-             <div className="z-10 flex flex-col items-center justify-center relative">
-                <Pencil size={24} className="text-black mb-4 hover:rotate-12 transition-transform" />
-                <div className="border-4 border-black px-8 py-4 bg-white relative shadow-[4px_4px_0px_rgba(0,0,0,0.1)] hover:shadow-[6px_6px_0px_rgba(0,0,0,0.2)] hover:-translate-y-1 transition-all cursor-pointer" style={{borderRadius: '2px 4px 3px 2px'}}>
-                   <span className="text-7xl font-serif text-black font-black tracking-tighter select-none">{formatTime(displayTime)}</span>
-                </div>
-                <span className="text-xs text-gray-500 font-serif mt-3 italic">Sketching...</span>
-             </div>
-          </div>
-        );
-
-      case 'forest':
-        return (
-          <div className="relative w-[350px] h-[350px] flex items-center justify-center">
-            {/* 背景圆形 */}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#ecfdf5] to-[#d1fae5] border-4 border-[#10b981] shadow-2xl"></div>
-            
-            {/* 进度环 */}
-            <svg className="absolute inset-0 w-full h-full -rotate-90" style={{ zIndex: 1 }}>
-              <circle 
-                cx="175" 
-                cy="175" 
-                r="165" 
-                fill="none" 
-                stroke="#6ee7b7" 
-                strokeWidth="8" 
-                opacity="0.3"
-              />
-              <circle 
-                cx="175" 
-                cy="175" 
-                r="165" 
-                fill="none" 
-                stroke="#10b981" 
-                strokeWidth="8" 
-                strokeDasharray={`${2 * Math.PI * 165}`}
-                strokeDashoffset={`${2 * Math.PI * 165 * (1 - progress)}`}
-                strokeLinecap="round"
-                className="transition-all duration-1000 ease-linear"
-              />
-            </svg>
-            
-            {/* 中心内容 */}
-            <div className="relative z-10 flex flex-col items-center justify-center">
-              <Leaf size={36} className="text-[#059669] mb-3 drop-shadow-sm" fill="currentColor" />
-              <span className="text-8xl font-sans font-black text-[#064e3b] tracking-tight tabular-nums leading-none select-none drop-shadow-lg">{formatTime(displayTime)}</span>
-              <span className="text-xs font-bold text-[#047857] mt-2 tracking-wider uppercase">Focusing</span>
-            </div>
-          </div>
-        );
-
-      default: return null;
+          <div className="absolute w-[86px] h-[86px] rounded-full border-4 border-[#8f7a60] bg-[#261f17]" />
+          <div className="absolute w-[24px] h-[24px] rounded-full bg-[#0f0c09] border border-[#514434]" />
+          {baseText}
+        </div>
+      );
     }
+
+    if (theme === 'forest') {
+      return (
+        <div className="relative w-[380px] h-[380px] flex items-center justify-center overflow-visible">
+          <div className="absolute inset-4 rounded-full bg-gradient-to-b from-[#eafff6] to-[#d7fbe9] border-4 border-[#a7f3d0]" />
+          <div className="absolute inset-8 rounded-full overflow-hidden border border-[#22c55e]/50">
+            <div className="absolute bottom-0 left-0 w-[140%] h-[45%] bg-gradient-to-r from-[#34d399] to-[#059669] opacity-65" />
+            <div className="absolute bottom-[12%] left-[-10%] w-[130%] h-[32%] bg-gradient-to-r from-[#6ee7b7] to-[#10b981] opacity-45" />
+          </div>
+          <div className="absolute w-[330px] h-[330px] rounded-full border-2 border-[#34d399]/60" />
+          {baseText}
+        </div>
+      );
+    }
+
+    if (theme === 'cyberpunk') {
+      return (
+        <div className="relative w-[380px] h-[380px] flex items-center justify-center overflow-visible">
+          <div className="absolute w-[330px] h-[330px] border border-[#00ff41]/40" style={{ transform: 'rotate(45deg)' }} />
+          <div className="absolute w-[290px] h-[290px] border border-[#00ff41]/70" style={{ transform: 'rotate(45deg)' }} />
+          <div className="absolute w-[240px] h-[240px] bg-black border-2 border-[#00ff41]/70 shadow-[0_0_30px_rgba(0,255,65,0.25)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,255,65,0.08),transparent_65%)]" />
+          {baseText}
+        </div>
+      );
+    }
+
+    if (theme === 'pixel') {
+      return (
+        <div className="relative w-[360px] h-[360px] flex items-center justify-center overflow-visible border-4 border-black bg-white shadow-[10px_10px_0_#000]">
+          <div className="absolute inset-0 bg-[linear-gradient(transparent_95%,rgba(0,0,0,0.05)_100%)] bg-[length:100%_16px]" />
+          <div className="absolute top-5 left-5 right-5 h-6 border-2 border-black">
+            <div className="h-full w-full bg-red-500/70" />
+          </div>
+          {baseText}
+        </div>
+      );
+    }
+
+    if (theme === 'bw') {
+      return (
+        <div className="relative w-[380px] h-[380px] flex items-center justify-center overflow-visible">
+          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 380 380">
+            <path d="M188 24 C286 36 352 108 352 190 C352 284 279 352 188 352 C98 352 28 282 28 191 C28 103 94 31 188 24" fill="none" stroke="#111" strokeWidth="6" />
+            <path d="M188 42 C272 54 332 114 332 190 C332 270 272 332 188 338 C108 334 46 274 44 194 C44 114 102 52 188 42" fill="none" stroke="#444" strokeWidth="2" strokeDasharray="8 9" />
+          </svg>
+          {baseText}
+        </div>
+      );
+    }
+
+    return (
+      <div className="relative w-[380px] h-[380px] flex items-center justify-center overflow-visible">
+        <div className="absolute w-[330px] h-[330px] rounded-full bg-gradient-to-br from-[#4f46e5]/20 to-[#22d3ee]/10 blur-2xl" />
+        <div className="absolute w-[300px] h-[300px] rounded-full border border-[#6366f1]/40" />
+        <div className="absolute w-[250px] h-[250px] rounded-full border border-cyan-300/30" />
+        {baseText}
+      </div>
+    );
   };
 
   return (
-    <div className="h-full w-full flex items-center justify-center animate-in fade-in duration-500 relative">
-      {/* 🟢 结算奖励弹窗 */}
-      {showReward && <RewardOverlay />}
+    <div className="h-full w-full flex items-center justify-center relative">
+      {showReward && (
+        <div className="absolute inset-0 z-[100] flex items-center justify-center">
+          <div className="bg-black/90 border border-yellow-400 rounded-2xl p-6 min-w-[360px] text-center shadow-2xl">
+            <h3 className="text-xl font-black text-white">SESSION COMPLETE</h3>
+            <div className="flex justify-center gap-8 mt-3 text-sm">
+              <div className="text-yellow-300 font-bold">+{rewardData.energy} Energy</div>
+              <div className="text-blue-300 font-bold">+{rewardData.xp} XP</div>
+            </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 w-full max-w-5xl items-center relative z-10">
-        <div className={`flex justify-center select-none transition-all duration-500 hover:scale-105 ${isActive && !isPaused ? 'animate-[breathe_3s_ease-in-out_infinite]' : ''}`}>
-            {renderTimerFace()}
-        </div>
-        
-        {/* 控制面板 */}
-        <div className="bg-surface p-8 rounded-theme border border-border shadow-theme backdrop-blur-xl flex flex-col gap-6 w-full max-w-md mx-auto relative z-50">
-           <div className="flex gap-3">
-              {(['countdown', 'stopwatch'] as const).map((m) => (
-                <button key={m} onClick={() => !isActive && setMode(m)} className={`flex-1 py-3 rounded-theme text-sm font-bold flex items-center justify-center gap-2 btn-bounce ${mode===m ? '!bg-primary text-primary-fg' : 'bg-transparent border border-border text-text hover:bg-black/5'}`}>
-                  {m==='countdown'?<Clock size={16}/>:<Zap size={16}/>} {m==='countdown'?'倒计时':'正计时'}
-                </button>
-              ))}
-           </div>
-           
-           {mode === 'countdown' && !isActive && (
-             <div className="space-y-2">
-                <div className="flex justify-between text-xs font-bold text-text-muted"><span>时长: {targetMinutes} 分钟</span></div>
-                <input 
-                  type="range" 
-                  min="1" 
-                  max="120" 
-                  value={targetMinutes} 
-                  onChange={e=>setTargetMinutes(Number(e.target.value))} 
-                  className="w-full h-4 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary opacity-100 hover:opacity-100 z-50 relative"
-                />
-             </div>
-           )}
-
-           <div className="flex flex-wrap gap-2">
-              {/* 渲染现有标签 */}
-              {customTags?.map((tag, idx) => (
-                <button key={`${tag.name}-${idx}`} onClick={() => setCurrentTag(tag.name)} className={`px-3 py-1 rounded-theme text-xs border transition-all btn-bounce ${currentTag===tag.name ? 'border-primary text-primary font-bold' : 'border-transparent bg-black/5 text-text-muted hover:text-text'}`}>
-                  {tag.name}
-                </button>
-              ))}
-              {/* 添加标签按钮 */}
-              <button 
-                onClick={handleAddTag} 
-                className="px-3 py-1 rounded-theme text-xs border border-dashed border-text-muted text-text-muted hover:text-primary hover:border-primary transition-all flex items-center gap-1"
-                title="添加新标签"
-              >
-                <Plus size={12} />
-              </button>
-           </div>
-           
-           <div className="mt-4">
-              {!isActive ? (
-                <button onClick={handleStart} className="w-full py-4 rounded-theme !bg-primary text-primary-fg font-bold text-lg shadow-lg flex items-center justify-center gap-2 btn-bounce">
-                  <Play size={20} fill="currentColor"/> 开始专注
-                </button>
-              ) : (
-                <div className="flex gap-4">
-                  <button onClick={isPaused ? handleResume : handlePause} className="flex-1 py-4 rounded-theme border-2 border-primary !text-primary font-bold flex items-center justify-center gap-2 hover:bg-primary/10 btn-bounce">
-                    {isPaused ? <Play size={20}/> : <Pause size={20}/>} {isPaused ? '继续' : '暂停'}
-                  </button>
-                  <button onClick={() => handleFinish(false)} className="px-6 rounded-theme bg-red-500/10 text-red-500 border border-red-500/50 hover:bg-red-500 hover:text-white transition-all btn-bounce">
-                    <X size={24}/>
-                  </button>
+            {newArtifact ? (
+              <div className="mt-4 border-t border-white/10 pt-4 text-left">
+                <div className="text-xs uppercase tracking-widest text-purple-300 mb-2">剧情彩蛋已解锁</div>
+                <div className="p-3 rounded-lg border bg-white/5" style={{ borderColor: RARITY_CONFIG[newArtifact.rarity].color }}>
+                  <div className="text-sm font-bold" style={{ color: RARITY_CONFIG[newArtifact.rarity].color }}>{newArtifact.name}</div>
+                  <div className="text-xs text-gray-300 mt-1 line-clamp-2">{newArtifact.description}</div>
                 </div>
-              )}
-           </div>
+              </div>
+            ) : (
+              <div className="mt-4 text-xs text-slate-300">本次未掉落彩蛋，保持连击会提升概率。</div>
+            )}
+
+            <div className="mt-4 flex gap-2 justify-center">
+              <button onClick={() => { setShowReward(false); setActiveTab('rank'); }} className="px-3 py-1.5 rounded bg-primary text-white text-xs font-bold flex items-center gap-1">去剧情 <ArrowRight size={12} /></button>
+              <button onClick={() => { setShowReward(false); setActiveTab('museum'); }} className="px-3 py-1.5 rounded border border-slate-500 text-slate-100 text-xs font-bold flex items-center gap-1">去收藏 <ArrowRight size={12} /></button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 w-full max-w-6xl">
+        <div className="bg-surface border border-border rounded-theme p-8 flex items-center justify-center overflow-visible">
+          {renderTimerFace()}
+        </div>
+
+        <div className="bg-surface border border-border rounded-theme p-6 flex flex-col gap-5">
+          <div className="flex gap-2">
+            {(['countdown', 'stopwatch'] as const).map((m) => (
+              <button key={m} onClick={() => !isActive && setMode(m)} className={`flex-1 py-2.5 rounded-theme text-sm font-bold ${mode === m ? 'bg-primary text-white' : 'border border-border text-text hover:bg-white/5'}`}>{m === 'countdown' ? '倒计时' : '正计时'}</button>
+            ))}
+          </div>
+
+          {mode === 'countdown' && !isActive && (
+            <div>
+              <div className="text-xs text-text-muted mb-1">时长: {targetMinutes} 分钟</div>
+              <input type="range" min={1} max={120} value={targetMinutes} onChange={(e) => setTargetMinutes(Number(e.target.value))} className="w-full accent-primary" />
+              <div className="mt-2 flex flex-wrap gap-2">
+                {presetMinutes.map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setTargetMinutes(m)}
+                    className={`px-2.5 py-1 rounded text-[11px] border transition ${targetMinutes === m ? 'border-primary text-primary bg-primary/10 font-bold' : 'border-border text-text-muted hover:text-text hover:bg-white/5'}`}
+                  >
+                    {m}m
+                  </button>
+                ))}
+              </div>
+              <div className="mt-2 text-[11px] text-text-muted">建议：日常 25m，深度任务 45m+</div>
+            </div>
+          )}
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs font-bold text-text-muted">专注标签</div>
+              <button onClick={() => setShowTagEditor((v) => !v)} className="text-xs text-primary flex items-center gap-1"><Plus size={12} /> 编辑</button>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {customTags.map((tag) => (
+                <button key={tag.name} onClick={() => setCurrentTag(tag.name)} className={`px-3 py-1 text-xs rounded-theme border ${currentTag === tag.name ? 'border-primary text-primary font-bold' : 'border-transparent bg-black/5 text-text-muted hover:text-text'}`}>{tag.name}</button>
+              ))}
+            </div>
+
+            {showTagEditor && (
+              <div className="mt-3 p-3 border border-border rounded-theme bg-black/10 space-y-2">
+                <div className="flex gap-2">
+                  <input value={newTag} onChange={(e) => setNewTag(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addTagInline(); if (e.key === 'Escape') setNewTag(''); }} placeholder="新增标签（Enter 保存）" className="flex-1 bg-background border border-border rounded px-3 py-2 text-sm" />
+                  <button onClick={addTagInline} className="px-3 text-xs rounded bg-primary text-white">添加</button>
+                </div>
+
+                <div className="max-h-28 overflow-y-auto custom-scrollbar space-y-1">
+                  {customTags.map((tag) => (
+                    <div key={`${tag.name}-edit`} className="flex items-center gap-2">
+                      {editingTag === tag.name ? (
+                        <>
+                          <input value={editingValue} onChange={(e) => setEditingValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') saveRename(tag.name); if (e.key === 'Escape') { setEditingTag(null); setEditingValue(''); } }} className="flex-1 bg-background border border-border rounded px-2 py-1 text-xs" />
+                          <button onClick={() => saveRename(tag.name)} className="p-1 text-emerald-300"><Save size={12} /></button>
+                          <button onClick={() => setEditingTag(null)} className="p-1 text-slate-400"><X size={12} /></button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="flex-1 text-xs text-text">{tag.name}</span>
+                          <button onClick={() => { setEditingTag(tag.name); setEditingValue(tag.name); }} className="p-1 text-slate-300"><Sparkles size={12} /></button>
+                          <button onClick={() => deleteTag(tag.name)} className="p-1 text-red-300"><Trash2 size={12} /></button>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+            <div className="border border-border rounded p-2 bg-black/10">连续天数: <span className="font-bold text-text">{dailyProgress.streakDays}</span></div>
+            <div className="border border-border rounded p-2 bg-black/10">累计时长: <span className="font-bold text-text">{totalHours}h {remainMinutes}m</span></div>
+          </div>
+
+          <div className="text-xs text-text-muted border border-border rounded p-3 bg-black/10">段位 {storyProgress.storyRank} · 还差 <span className="font-bold text-text">{storyProgress.rankNeed}</span> XP 升下一星，约再完成 <span className="font-bold text-text">{nearUpgradeSessions}</span> 次 25 分钟专注。</div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => setActiveTab('rank')} className="py-2 rounded border border-border text-xs font-bold text-text hover:bg-white/5 transition">
+              查看剧情进度
+            </button>
+            <button onClick={() => setActiveTab('museum')} className="py-2 rounded border border-border text-xs font-bold text-text hover:bg-white/5 transition">
+              查看彩蛋收藏
+            </button>
+          </div>
+
+          <div className="mt-2">
+            {!isActive ? (
+              <button onClick={handleStart} className="w-full py-3.5 rounded-theme bg-primary text-white font-bold text-lg flex items-center justify-center gap-2"><Play size={18} fill="currentColor" /> 开始专注</button>
+            ) : (
+              <div className="flex gap-3">
+                <button onClick={isPaused ? handleResume : handlePause} className="flex-1 py-3 rounded-theme border border-primary text-primary font-bold flex items-center justify-center gap-2">{isPaused ? <Play size={18} /> : <Pause size={18} />} {isPaused ? '继续' : '暂停'}</button>
+                <button onClick={() => finishSession(false)} className="px-4 rounded-theme bg-red-500/10 text-red-500 border border-red-500/40"><X size={20} /></button>
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
     </div>
