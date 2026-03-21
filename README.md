@@ -6,6 +6,7 @@
 
 Study Quest 是一个本地优先的专注成长应用：  
 一次专注结束后，稳定获得「奖励 + 剧情推进 + 彩蛋机会」，形成长期正反馈循环。
+<img width="1984" height="1206" alt="image" src="https://github.com/user-attachments/assets/d1443154-6ae2-4ff4-b223-d527f4345e33" />
 
 ---
 
