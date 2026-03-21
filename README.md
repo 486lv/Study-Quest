@@ -71,20 +71,7 @@ npm run dev
 
 ---
 
-## 打包为 Windows 安装包（exe）
 
-```bash
-npm run clean:cache
-npm run dist
-```
-
-打包产物默认在：
-
-```text
-dist/
-```
-
----
 
 ## 发布流程（GitHub）
 
