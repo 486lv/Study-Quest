@@ -1,7 +1,7 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Pause, Play, Plus, Save, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowRight, Music2, Pause, Play, Plus, Save, SkipBack, SkipForward, Sparkles, Trash2, X } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Artifact, digForArtifact, RARITY_CONFIG } from '@/data/artifactSystem';
 
@@ -24,6 +24,17 @@ export default function Timer() {
     theme,
     onboarding,
     setOnboardingStep,
+    focusSessionState,
+    music,
+    musicPlaylists,
+    currentPlaylistId,
+    setCurrentPlaylist,
+    setCurrentSource,
+    setMusicPlaying,
+    setMusicProgress,
+    setFocusSessionState,
+    playNextPlaylistSource,
+    playPrevPlaylistSource,
   } = useStore();
 
   const [mode, setMode] = useState<'countdown' | 'stopwatch'>('countdown');
@@ -56,6 +67,34 @@ export default function Timer() {
     if (!customTags.find((t) => t.name === currentTag) && customTags[0]) setCurrentTag(customTags[0].name);
   }, [customTags, currentTag]);
 
+  const currentSource = useMemo(
+    () => music.library.find((m) => m.id === music.currentSourceId) || null,
+    [music.library, music.currentSourceId]
+  );
+
+  const currentPlaylist = useMemo(
+    () => musicPlaylists.find((p) => p.id === currentPlaylistId) || musicPlaylists[0],
+    [musicPlaylists, currentPlaylistId]
+  );
+
+  const scopedSources = useMemo(() => {
+    if (!currentPlaylist) return music.library;
+    const ids = new Set(currentPlaylist.sourceIds);
+    return music.library.filter((s) => ids.has(s.id));
+  }, [music.library, currentPlaylist]);
+
+  const isEmbedSource = !!currentSource && (currentSource.mediaKind === 'embed' || ['bilibili', 'youtube', 'netease'].includes(currentSource.type));
+
+  useEffect(() => {
+    if (!scopedSources.length) {
+      if (music.currentSourceId) setCurrentSource('');
+      return;
+    }
+    if (!scopedSources.some((item) => item.id === music.currentSourceId)) {
+      setCurrentSource(scopedSources[0].id);
+    }
+  }, [scopedSources, music.currentSourceId, setCurrentSource]);
+
   useEffect(() => {
     if (!(isActive && !isPaused)) {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -83,22 +122,36 @@ export default function Timer() {
   }, [isActive, isPaused, mode]);
 
   const handleStart = () => {
+    const sourceToPlay = currentSource || scopedSources[0] || null;
     setIsActive(true);
     setIsPaused(false);
     startRef.current = Date.now();
     pausedRef.current = 0;
     initialTargetRef.current = targetMinutes;
+    if (sourceToPlay) {
+      if (music.currentSourceId !== sourceToPlay.id) setCurrentSource(sourceToPlay.id);
+      setMusicPlaying(true);
+    }
+    setFocusSessionState('active');
     if (!onboarding.completed && onboarding.step === 1) setOnboardingStep(2);
   };
 
   const handlePause = () => {
     setIsPaused(true);
     pauseStartRef.current = Date.now();
+    setMusicPlaying(false);
+    setFocusSessionState('paused');
   };
 
   const handleResume = () => {
     setIsPaused(false);
     pausedRef.current += Date.now() - pauseStartRef.current;
+    const sourceToPlay = currentSource || scopedSources[0] || null;
+    if (sourceToPlay) {
+      if (music.currentSourceId !== sourceToPlay.id) setCurrentSource(sourceToPlay.id);
+      setMusicPlaying(true);
+    }
+    setFocusSessionState('active');
   };
 
   const finishSession = (isNaturalEnd: boolean) => {
@@ -113,6 +166,9 @@ export default function Timer() {
 
     setIsActive(false);
     setIsPaused(false);
+    setMusicPlaying(false);
+    setMusicProgress(0, 0);
+    setFocusSessionState('idle');
 
     if (actualMinutes < 1) {
       resetTimer();
@@ -163,6 +219,14 @@ export default function Timer() {
     pausedRef.current = 0;
     setDisplaySeconds(mode === 'countdown' ? targetMinutes * 60 : 0);
   };
+
+  useEffect(() => {
+    if (!isActive) {
+      setMusicPlaying(false);
+      setMusicProgress(0, 0);
+      setFocusSessionState('idle');
+    }
+  }, [isActive, setMusicPlaying, setMusicProgress, setFocusSessionState]);
 
   const fmt = (sec: number) => {
     const m = Math.floor(Math.max(0, sec) / 60);
@@ -343,12 +407,12 @@ export default function Timer() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 w-full max-w-6xl">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 w-full max-w-6xl min-h-0">
         <div className="bg-surface border border-border rounded-theme p-8 flex items-center justify-center overflow-visible">
           {renderTimerFace()}
         </div>
 
-        <div className="bg-surface border border-border rounded-theme p-6 flex flex-col gap-5">
+        <div className="bg-surface border border-border rounded-theme p-6 flex flex-col gap-5 max-h-[72vh] overflow-y-auto custom-scrollbar">
           <div className="flex gap-2">
             {(['countdown', 'stopwatch'] as const).map((m) => (
               <button key={m} onClick={() => !isActive && setMode(m)} className={`flex-1 py-2.5 rounded-theme text-sm font-bold ${mode === m ? 'bg-primary text-white' : 'border border-border text-text hover:bg-white/5'}`}>{m === 'countdown' ? '倒计时' : '正计时'}</button>
@@ -414,6 +478,49 @@ export default function Timer() {
                 </div>
               </div>
             )}
+          </div>
+
+          <div className="border border-border rounded-theme p-3 bg-black/10 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-bold text-text-muted flex items-center gap-2"><Music2 size={14} /> 专注音乐</div>
+              <button onClick={() => setActiveTab('music')} className="text-[11px] text-primary">打开音乐库</button>
+            </div>
+            <select value={currentPlaylistId} onChange={(e) => setCurrentPlaylist(e.target.value)} className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs">
+              {musicPlaylists.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <select value={music.currentSourceId} onChange={(e) => setCurrentSource(e.target.value)} className="w-full bg-background border border-border rounded px-2 py-2 text-xs">
+              <option value="">请选择曲目</option>
+              {scopedSources.map((m) => (
+                <option key={m.id} value={m.id}>{m.title}</option>
+              ))}
+            </select>
+            <div className="flex gap-2">
+              <button
+                onClick={() => playPrevPlaylistSource()}
+                disabled={!currentSource || !scopedSources.length}
+                className="px-3 py-1.5 rounded border border-border text-xs font-bold text-text disabled:opacity-40 flex items-center gap-1"
+              >
+                <SkipBack size={12} /> 上一首
+              </button>
+              <button
+                onClick={() => playNextPlaylistSource()}
+                disabled={!currentSource || !scopedSources.length}
+                className="px-3 py-1.5 rounded border border-border text-xs font-bold text-text disabled:opacity-40 flex items-center gap-1"
+              >
+                <SkipForward size={12} /> 下一首
+              </button>
+            </div>
+            <div className="h-[220px] rounded-2xl border border-white/15 bg-black/20 overflow-auto custom-scrollbar">
+              {!currentSource && <div className="h-full min-h-[220px] flex items-center justify-center text-sm text-text-muted">先在上方选一首歌</div>}
+              {currentSource && !isEmbedSource && (
+                <div className="h-full min-h-[220px] flex items-center justify-center p-4">
+                  <audio src={currentSource.value} controls className="w-full" />
+                </div>
+              )}
+              {currentSource && isEmbedSource && (
+                <iframe src={currentSource.value} className="w-full h-full min-h-[320px]" allow="autoplay; fullscreen" />
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">

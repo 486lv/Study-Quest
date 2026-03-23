@@ -1,6 +1,6 @@
 {
   "name": "study-quest",
-  "version": "2.0.0",
+  "version": "2.3.0",
   "private": true,
   "main": "main.js",
   "scripts": {
@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "dist": "next build && electron-builder",
+    "dist:clean": "powershell -NoProfile -Command \"taskkill /F /IM 'Study Quest.exe' 2>$null; taskkill /F /IM electron.exe 2>$null; taskkill /F /IM node.exe 2>$null; Start-Sleep -Milliseconds 300; if (Test-Path dist) { Remove-Item dist -Recurse -Force }; if (Test-Path .next\\\\cache) { Remove-Item .next\\\\cache -Recurse -Force };\" && npm run dist",
     "clean:cache": "powershell -NoProfile -Command \"if (Test-Path .next\\\\cache) { Remove-Item .next\\\\cache -Recurse -Force }\""
   },
   "build": {
@@ -19,18 +20,21 @@
     },
     "win": {
       "target": "nsis",
-      "icon": "node_modules/app-builder-lib/templates/icons/proton-native/proton-native.ico"
+      "icon": "assets/icon.ico"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "perMachine": true,
+      "deleteAppDataOnUninstall": false,
       "shortcutName": "Study Quest"
     },
     "files": [
       "out/**/*",
       "main.js",
       "preload.js",
+      "webview-preload.js",
+      "assets/icon.ico",
       "package.json"
     ],
     "asarUnpack": [

@@ -11,11 +11,15 @@ import StatsChart from '@/components/StatsChart';
 import Shop from '@/components/Shop';
 import StoryMode from '@/components/StoryMode';
 import Museum from '@/components/Museum';
+import MusicLibrary from '@/components/MusicLibrary';
+import GlobalMusicHost from '@/components/GlobalMusicHost';
 
 import {
   LayoutDashboard,
   Timer as TimerIcon,
   ShoppingBag,
+  Clock3,
+  Music2,
   Settings as SettingsIcon,
   Trophy,
   ListTodo,
@@ -26,12 +30,24 @@ import {
 } from 'lucide-react';
 
 export default function Home() {
-  const { user, energy, xp, activeTab, setActiveTab, theme, onboarding, dailyProgress, sessions, storyProgress, completeOnboarding } = useStore();
+  const { user, energy, xp, activeTab, setActiveTab, theme, onboarding, dailyProgress, sessions, storyProgress, motto, setMotto, completeOnboarding } = useStore();
   const [mounted, setMounted] = useState(false);
+  const [clockNow, setClockNow] = useState(() => new Date());
+  const [editingMotto, setEditingMotto] = useState(false);
+  const [mottoDraft, setMottoDraft] = useState('');
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => setClockNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    setMottoDraft(motto || '');
+  }, [motto]);
 
   const tabMeta: Record<string, { title: string; desc: string }> = {
     timer: { title: '专注模式', desc: '开始一段可追踪、可成长的专注循环。' },
@@ -41,6 +57,7 @@ export default function Home() {
     rank: { title: '剧情中心', desc: '专注推进段位，解锁主线和隐藏片段。' },
     shop: { title: '奖励商城', desc: '把专注收益兑换成现实奖励。' },
     museum: { title: '彩蛋收藏', desc: '回看你已触发的隐藏内容与线索。' },
+    music: { title: '音乐库', desc: '管理曲目并为专注页选择播放源。' },
     settings: { title: '应用设置', desc: '调整主题与数据配置。' },
   };
 
@@ -52,6 +69,10 @@ export default function Home() {
     [sessions]
   );
   const totalFocusText = `${Math.floor(totalFocusedMinutes / 60)}h ${totalFocusedMinutes % 60}m`;
+  const hh = String(clockNow.getHours()).padStart(2, '0');
+  const mm = String(clockNow.getMinutes()).padStart(2, '0');
+  const ss = String(clockNow.getSeconds()).padStart(2, '0');
+  const todayText = clockNow.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', weekday: 'short' });
 
   if (!mounted) return null;
 
@@ -78,6 +99,7 @@ export default function Home() {
 
   return (
     <div data-theme={theme} className="flex h-screen w-screen bg-background text-text overflow-hidden relative font-sans items-center justify-center transition-colors duration-700">
+      <GlobalMusicHost />
       {!onboarding.completed && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[999] bg-black/80 border border-primary/50 rounded-xl px-4 py-3 text-sm shadow-xl max-w-xl w-[92%]">
           <div className="flex items-start gap-2">
@@ -120,6 +142,7 @@ export default function Home() {
             <NavButton tab="rank" icon={Trophy} label="Story 剧情" />
             <NavButton tab="shop" icon={ShoppingBag} label="Shop 商城" />
             <NavButton tab="museum" icon={Box} label="Museum 彩蛋" />
+            <NavButton tab="music" icon={Music2} label="Music 音乐库" />
           </nav>
 
           <div className="mt-auto pt-4 border-t border-border">
@@ -142,7 +165,7 @@ export default function Home() {
                 <div className="text-2xl font-black tracking-tight text-text">{tabMeta[activeTab]?.title || 'Study Quest'}</div>
                 <div className="text-xs text-text-muted mt-1">{tabMeta[activeTab]?.desc || ''}</div>
               </div>
-              <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="grid grid-cols-4 gap-2 text-xs">
                 <div className="px-3 py-2 rounded-lg border border-border bg-black/10">
                   连续天数: <span className="font-bold text-text">{dailyProgress.streakDays}</span>
                 </div>
@@ -151,6 +174,15 @@ export default function Home() {
                 </div>
                 <div className="px-3 py-2 rounded-lg border border-border bg-black/10">
                   段位: <span className="font-bold text-text">{storyProgress.storyRank}</span>
+                </div>
+                <div className="px-2 py-2 rounded-lg border border-border bg-black/20 flex items-center justify-between gap-2">
+                  <div className="text-[10px] text-text-muted flex items-center gap-1"><Clock3 size={11} /> {todayText}</div>
+                  <div className="flex items-center gap-1 font-black text-text text-sm tabular-nums">
+                    <span className="px-1.5 py-0.5 rounded bg-black/30 border border-border">{hh}</span>
+                    <span>:</span>
+                    <span className="px-1.5 py-0.5 rounded bg-black/30 border border-border">{mm}</span>
+                    <span className="text-text-muted">:{ss}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -165,8 +197,39 @@ export default function Home() {
               {activeTab === 'shop' && <Shop />}
               {activeTab === 'rank' && <StoryMode />}
               {activeTab === 'museum' && <Museum />}
+              {activeTab === 'music' && <MusicLibrary />}
               {activeTab === 'settings' && <Settings />}
             </div>
+          </div>
+          <div className="px-8 py-3 border-t border-border/70 bg-black/5">
+            {!editingMotto ? (
+              <button
+                onClick={() => setEditingMotto(true)}
+                className="w-full text-left text-sm text-text-muted hover:text-text transition truncate"
+                title={motto || '点击设置格言'}
+              >
+                「{motto || '点击设置你的专属格言'}」
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  value={mottoDraft}
+                  onChange={(e) => setMottoDraft(e.target.value)}
+                  placeholder="输入你的格言..."
+                  className="flex-1 bg-background border border-border rounded px-3 py-2 text-sm"
+                />
+                <button
+                  onClick={() => {
+                    setMotto((mottoDraft || '').trim());
+                    setEditingMotto(false);
+                  }}
+                  className="px-3 py-2 rounded bg-primary text-white text-xs font-bold"
+                >
+                  保存
+                </button>
+                <button onClick={() => setEditingMotto(false)} className="px-3 py-2 rounded border border-border text-xs">取消</button>
+              </div>
+            )}
           </div>
         </main>
       </div>

@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import { Artifact } from '@/data/artifactSystem';
 
@@ -6,12 +6,51 @@ export type ThemeType = 'default' | 'cyberpunk' | 'pixel' | 'film' | 'bw' | 'for
 export type StoryRank = 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond';
 
 export type UserProfile = { username: string; avatar: string; isLoggedIn: boolean; joinedAt: string };
-export type Task = { id: string; title: string; isCompleted: boolean; priority: 'high' | 'normal' | 'low'; dueDate?: string; createdAt: string };
+export type Task = {
+  id: string;
+  title: string;
+  isCompleted: boolean;
+  priority: 'high' | 'normal' | 'low';
+  dueDate?: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+};
 export type SessionLog = { id: string; startTime: string; endTime: string; durationMinutes: number; tag: string; note?: string; status: 'completed' | 'abandoned'; mode: string };
 export type ShopItem = { id: string; name: string; cost: number; icon: string; stock: number };
 export type PurchaseRecord = { id: string; itemId: string; itemName: string; cost: number; purchasedAt: string; status: 'unused' | 'used' };
 export type InventoryItem = { id: string; purchaseId: string; name: string; cost: number; icon: string; purchasedAt: string; status: 'unused' | 'used' };
 export type Habit = { id: string; name: string; icon: string; streak: number; lastCheckIn: string; history: string[] };
+export type MusicSource = {
+  id: string;
+  type: 'local' | 'url' | 'bilibili' | 'youtube' | 'netease';
+  title: string;
+  value: string;
+  mediaKind?: 'audio' | 'embed';
+  durationSec?: number;
+  cover?: string;
+  createdAt: string;
+};
+export type MusicPlaylist = {
+  id: string;
+  name: string;
+  sourceIds: string[];
+  createdAt: string;
+};
+export type MusicPlaybackMode = 'single' | 'playlist' | 'shuffle';
+export type MusicState = {
+  library: MusicSource[];
+  currentSourceId: string;
+  isPlaying: boolean;
+  volume: number;
+  timerAutoPlayEnabled: boolean;
+  playOnlyDuringTimer: boolean;
+  playbackMode: MusicPlaybackMode;
+  progressCurrentSec: number;
+  progressDurationSec: number;
+};
+export type FocusSessionState = 'idle' | 'active' | 'paused';
 
 export type StoryProgress = {
   storyRank: StoryRank;
@@ -75,7 +114,7 @@ interface AppState {
   theme: ThemeType;
   bgImage: string;
   blurLevel: number;
-  activeTab: 'timer' | 'tasks' | 'habits' | 'stats' | 'shop' | 'rank' | 'settings' | 'museum';
+  activeTab: 'timer' | 'tasks' | 'habits' | 'stats' | 'shop' | 'rank' | 'settings' | 'museum' | 'music';
   strictMode: boolean;
   tasks: Task[];
   sessions: SessionLog[];
@@ -96,16 +135,25 @@ interface AppState {
   settingsProfile: SettingsProfile;
   shortcuts: ShortcutMapping;
   focusTemplates: FocusTemplate[];
+  music: MusicState;
+  focusSessionState: FocusSessionState;
+  musicPlaylists: MusicPlaylist[];
+  currentPlaylistId: string;
+  motto: string;
 
   login: (username: string) => Promise<void>;
   logout: () => void;
   updateUser: (data: Partial<UserProfile>) => void;
   setActiveTab: (tab: AppState['activeTab']) => void;
   setTheme: (theme: ThemeType) => void;
-  addTask: (title: string, priority: 'high' | 'normal' | 'low', dueDate?: string) => void;
+  addTask: (title: string, priority: 'high' | 'normal' | 'low', dueDate?: string, description?: string) => void;
   toggleTask: (id: string) => void;
   deleteTask: (id: string) => void;
   updateTaskPriority: (id: string, priority: 'high' | 'normal' | 'low') => void;
+  updateTask: (id: string, patch: Partial<Pick<Task, 'title' | 'priority' | 'dueDate' | 'description'>>) => void;
+  completeTasks: (ids: string[]) => void;
+  clearCompletedTasks: () => void;
+  postponeTask: (id: string, mode: 'tomorrow' | 'weekend') => void;
   addSession: (data: SessionLog) => void;
   addHabit: (name: string, icon: string) => void;
   deleteHabit: (id: string) => void;
@@ -131,6 +179,25 @@ interface AppState {
   setShortcuts: (data: Partial<ShortcutMapping>) => void;
   addFocusTemplate: (name: string, focusMinutes: number, restMinutes: number) => void;
   deleteFocusTemplate: (id: string) => void;
+  addMusicSource: (source: Omit<MusicSource, 'id' | 'createdAt'>) => void;
+  removeMusicSource: (id: string) => void;
+  setCurrentSource: (id: string) => void;
+  setMusicPlaying: (val: boolean) => void;
+  setMusicVolume: (val: number) => void;
+  setTimerAutoPlayEnabled: (val: boolean) => void;
+  setPlayOnlyDuringTimer: (val: boolean) => void;
+  setMusicPlaybackMode: (mode: MusicPlaybackMode) => void;
+  setMusicProgress: (currentSec: number, durationSec: number) => void;
+  setFocusSessionState: (state: FocusSessionState) => void;
+  createMusicPlaylist: (name: string) => void;
+  renameMusicPlaylist: (id: string, name: string) => void;
+  deleteMusicPlaylist: (id: string) => void;
+  setCurrentPlaylist: (id: string) => void;
+  addSourceToPlaylist: (playlistId: string, sourceId: string) => void;
+  removeSourceFromPlaylist: (playlistId: string, sourceId: string) => void;
+  playNextPlaylistSource: () => void;
+  playPrevPlaylistSource: () => void;
+  setMotto: (val: string) => void;
   exportData: () => string;
   importData: (json: string) => boolean;
   resetData: () => void;
@@ -180,10 +247,45 @@ const calcStoryProgress = (xp: number): StoryProgress => {
   };
 };
 
+const getPlaylistSourceIds = (state: Pick<AppState, 'music' | 'musicPlaylists' | 'currentPlaylistId'>, playlistId?: string) => {
+  const activePlaylistId = playlistId || state.currentPlaylistId || state.musicPlaylists[0]?.id || '';
+  const playlist = state.musicPlaylists.find((item) => item.id === activePlaylistId) || state.musicPlaylists[0];
+  if (!playlist) return [];
+  const libraryIds = new Set(state.music.library.map((item) => item.id));
+  return playlist.sourceIds.filter((id) => libraryIds.has(id));
+};
+
+const pickPlaylistSourceId = (
+  state: Pick<AppState, 'music' | 'musicPlaylists' | 'currentPlaylistId'>,
+  direction: 1 | -1
+) => {
+  const ids = getPlaylistSourceIds(state);
+  if (!ids.length) return '';
+
+  const currentIndex = ids.indexOf(state.music.currentSourceId);
+  const fallbackIndex = direction === 1 ? 0 : ids.length - 1;
+  const safeIndex = currentIndex >= 0 ? currentIndex : fallbackIndex;
+  const mode = state.music.playbackMode;
+
+  if (mode === 'single') return ids[safeIndex];
+  if (mode === 'shuffle') {
+    if (ids.length === 1) return ids[0];
+    const pool = ids.filter((id) => id !== ids[safeIndex]);
+    return pool[Math.floor(Math.random() * pool.length)] || ids[safeIndex];
+  }
+
+  const nextIndex = safeIndex + direction;
+  if (nextIndex >= 0 && nextIndex < ids.length) return ids[nextIndex];
+  if (mode === 'playlist') {
+    return direction === 1 ? ids[0] : ids[ids.length - 1];
+  }
+  return ids[safeIndex];
+};
+
 const defaultUserName = 'Operator';
 
 const INITIAL_DEFAULTS: Omit<AppState,
-  'login'|'logout'|'updateUser'|'setActiveTab'|'setTheme'|'addTask'|'toggleTask'|'deleteTask'|'updateTaskPriority'|'addSession'|'addHabit'|'deleteHabit'|'checkInHabit'|'addShopItem'|'deleteShopItem'|'purchaseItem'|'markPurchaseUsed'|'useInventoryItem'|'addArtifact'|'addHiddenStoryId'|'setBgImage'|'setBlurLevel'|'setStrictMode'|'addTag'|'renameTag'|'removeTag'|'setOnboardingStep'|'completeOnboarding'|'setReminderConfig'|'setBackupConfig'|'setSettingsProfile'|'setShortcuts'|'addFocusTemplate'|'deleteFocusTemplate'|'exportData'|'importData'|'resetData'
+  'login'|'logout'|'updateUser'|'setActiveTab'|'setTheme'|'addTask'|'toggleTask'|'deleteTask'|'updateTaskPriority'|'updateTask'|'completeTasks'|'clearCompletedTasks'|'postponeTask'|'addSession'|'addHabit'|'deleteHabit'|'checkInHabit'|'addShopItem'|'deleteShopItem'|'purchaseItem'|'markPurchaseUsed'|'useInventoryItem'|'addArtifact'|'addHiddenStoryId'|'setBgImage'|'setBlurLevel'|'setStrictMode'|'addTag'|'renameTag'|'removeTag'|'setOnboardingStep'|'completeOnboarding'|'setReminderConfig'|'setBackupConfig'|'setSettingsProfile'|'setShortcuts'|'addFocusTemplate'|'deleteFocusTemplate'|'addMusicSource'|'removeMusicSource'|'setCurrentSource'|'setMusicPlaying'|'setMusicVolume'|'setTimerAutoPlayEnabled'|'setPlayOnlyDuringTimer'|'setMusicPlaybackMode'|'setMusicProgress'|'setFocusSessionState'|'createMusicPlaylist'|'renameMusicPlaylist'|'deleteMusicPlaylist'|'setCurrentPlaylist'|'addSourceToPlaylist'|'removeSourceFromPlaylist'|'playNextPlaylistSource'|'playPrevPlaylistSource'|'setMotto'|'exportData'|'importData'|'resetData'
 > = {
   user: { username: defaultUserName, avatar: `https://api.dicebear.com/7.x/notionists/svg?seed=${defaultUserName}`, isLoggedIn: true, joinedAt: new Date().toISOString() },
   energy: 0,
@@ -227,6 +329,23 @@ const INITIAL_DEFAULTS: Omit<AppState,
     { id: 'tpl-1', name: '标准番茄', focusMinutes: 25, restMinutes: 5 },
     { id: 'tpl-2', name: '深度沉浸', focusMinutes: 50, restMinutes: 10 },
   ],
+  music: {
+    library: [],
+    currentSourceId: '',
+    isPlaying: false,
+    volume: 0.6,
+    timerAutoPlayEnabled: false,
+    playOnlyDuringTimer: true,
+    playbackMode: 'playlist',
+    progressCurrentSec: 0,
+    progressDurationSec: 0,
+  },
+  focusSessionState: 'idle',
+  musicPlaylists: [
+    { id: 'playlist-default', name: '默认歌单', sourceIds: [], createdAt: new Date().toISOString() },
+  ],
+  currentPlaylistId: 'playlist-default',
+  motto: '今天也要比昨天更进一步。',
 };
 
 const singleFileStorage: StateStorage = {
@@ -237,21 +356,33 @@ const singleFileStorage: StateStorage = {
         const data = await (window as any).electronAPI.loadData(STORAGE_FILE);
         return data || null;
       } catch {
-        return null;
+        // Fall back to browser storage when Electron persistence is unavailable.
       }
     }
-    return window.localStorage.getItem(name);
+    try {
+      return window.localStorage.getItem(name);
+    } catch {
+      return null;
+    }
   },
   setItem: async (name: string, value: string): Promise<void> => {
     if (typeof window === 'undefined') return;
     if ((window as any).electronAPI?.saveData) {
       try { await (window as any).electronAPI.saveData(STORAGE_FILE, value); } catch {}
+      return;
     }
-    window.localStorage.setItem(name, value);
+    try {
+      window.localStorage.setItem(name, value);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') return;
+      throw error;
+    }
   },
   removeItem: async (name: string): Promise<void> => {
     if (typeof window === 'undefined') return;
-    window.localStorage.removeItem(name);
+    try {
+      window.localStorage.removeItem(name);
+    } catch {}
   },
 };
 
@@ -269,10 +400,64 @@ export const useStore = create<AppState>()(
       setActiveTab: (tab) => set({ activeTab: tab }),
       setTheme: (theme) => set({ theme }),
 
-      addTask: (title, priority, dueDate) => set((s) => ({ tasks: [{ id: Date.now().toString(), title, isCompleted: false, priority, dueDate, createdAt: new Date().toISOString() }, ...s.tasks] })),
-      toggleTask: (id) => set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, isCompleted: !t.isCompleted } : t)) })),
+      addTask: (title, priority, dueDate, description) => set((s) => {
+        const now = new Date().toISOString();
+        return {
+          tasks: [{
+            id: Date.now().toString(),
+            title,
+            isCompleted: false,
+            priority,
+            dueDate,
+            description: description?.trim() || '',
+            createdAt: now,
+            updatedAt: now,
+          }, ...s.tasks],
+        };
+      }),
+      toggleTask: (id) => set((s) => ({
+        tasks: s.tasks.map((t) => {
+          if (t.id !== id) return t;
+          const nextCompleted = !t.isCompleted;
+          return {
+            ...t,
+            isCompleted: nextCompleted,
+            completedAt: nextCompleted ? new Date().toISOString() : '',
+            updatedAt: new Date().toISOString(),
+          };
+        }),
+      })),
       deleteTask: (id) => set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) })),
-      updateTaskPriority: (id, priority) => set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, priority } : t)) })),
+      updateTaskPriority: (id, priority) => set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, priority, updatedAt: new Date().toISOString() } : t)) })),
+      updateTask: (id, patch) => set((s) => ({
+        tasks: s.tasks.map((t) => t.id === id ? {
+          ...t,
+          ...patch,
+          dueDate: patch.dueDate === '' ? undefined : patch.dueDate ?? t.dueDate,
+          updatedAt: new Date().toISOString(),
+        } : t),
+      })),
+      completeTasks: (ids) => set((s) => {
+        const idSet = new Set(ids);
+        const now = new Date().toISOString();
+        return {
+          tasks: s.tasks.map((t) => idSet.has(t.id) ? { ...t, isCompleted: true, completedAt: now, updatedAt: now } : t),
+        };
+      }),
+      clearCompletedTasks: () => set((s) => ({ tasks: s.tasks.filter((t) => !t.isCompleted) })),
+      postponeTask: (id, mode) => set((s) => {
+        const now = new Date();
+        if (mode === 'tomorrow') now.setDate(now.getDate() + 1);
+        if (mode === 'weekend') {
+          const day = now.getDay();
+          const delta = day === 0 ? 6 : 6 - day;
+          now.setDate(now.getDate() + delta);
+        }
+        const dueDate = now.toISOString().split('T')[0];
+        return {
+          tasks: s.tasks.map((t) => t.id === id ? { ...t, dueDate, updatedAt: new Date().toISOString() } : t),
+        };
+      }),
 
       addSession: (log) => set((state) => {
         const safeDuration = Number(log.durationMinutes) || 0;
@@ -392,6 +577,108 @@ export const useStore = create<AppState>()(
       setShortcuts: (data) => set((s) => ({ shortcuts: { ...s.shortcuts, ...data } })),
       addFocusTemplate: (name, focusMinutes, restMinutes) => set((s) => ({ focusTemplates: [...s.focusTemplates, { id: `tpl-${Date.now()}`, name, focusMinutes, restMinutes }] })),
       deleteFocusTemplate: (id) => set((s) => ({ focusTemplates: s.focusTemplates.filter((t) => t.id !== id) })),
+      addMusicSource: (source) => set((s) => {
+        const item: MusicSource = {
+          id: `music-${Date.now()}`,
+          createdAt: new Date().toISOString(),
+          ...source,
+        };
+        const playlistId = s.currentPlaylistId || s.musicPlaylists[0]?.id || '';
+        return {
+          music: {
+            ...s.music,
+            library: [item, ...s.music.library],
+            currentSourceId: s.music.currentSourceId || item.id,
+          },
+          musicPlaylists: s.musicPlaylists.map((p) =>
+            p.id === playlistId && !p.sourceIds.includes(item.id)
+              ? { ...p, sourceIds: [item.id, ...p.sourceIds] }
+              : p
+          ),
+        };
+      }),
+      removeMusicSource: (id) => set((s) => {
+        const nextLib = s.music.library.filter((m) => m.id !== id);
+        const nextCurrent = s.music.currentSourceId === id ? (nextLib[0]?.id || '') : s.music.currentSourceId;
+        return {
+          music: { ...s.music, library: nextLib, currentSourceId: nextCurrent },
+          musicPlaylists: s.musicPlaylists.map((p) => ({ ...p, sourceIds: p.sourceIds.filter((sid) => sid !== id) })),
+        };
+      }),
+      setCurrentSource: (id) => set((s) => ({ music: { ...s.music, currentSourceId: id } })),
+      setMusicPlaying: (val) => set((s) => ({ music: { ...s.music, isPlaying: val } })),
+      setMusicVolume: (val) => set((s) => ({ music: { ...s.music, volume: Math.max(0, Math.min(1, val)) } })),
+      setTimerAutoPlayEnabled: (val) => set((s) => ({ music: { ...s.music, timerAutoPlayEnabled: val } })),
+      setPlayOnlyDuringTimer: (val) => set((s) => ({ music: { ...s.music, playOnlyDuringTimer: val } })),
+      setMusicPlaybackMode: (mode) => set((s) => ({ music: { ...s.music, playbackMode: mode } })),
+      setMusicProgress: (currentSec, durationSec) =>
+        set((s) => ({
+          music: {
+            ...s.music,
+            progressCurrentSec: Number.isFinite(currentSec) ? Math.max(0, currentSec) : 0,
+            progressDurationSec: Number.isFinite(durationSec) ? Math.max(0, durationSec) : 0,
+          },
+        })),
+      setFocusSessionState: (focusSessionState) => set({ focusSessionState }),
+      createMusicPlaylist: (name) => set((s) => {
+        const safe = name.trim();
+        if (!safe) return s;
+        const id = `playlist-${Date.now()}`;
+        return {
+          musicPlaylists: [{ id, name: safe, sourceIds: [], createdAt: new Date().toISOString() }, ...s.musicPlaylists],
+          currentPlaylistId: id,
+        };
+      }),
+      renameMusicPlaylist: (id, name) => set((s) => {
+        const safe = name.trim();
+        if (!safe || s.musicPlaylists.some((p) => p.id !== id && p.name.toLowerCase() === safe.toLowerCase())) return s;
+        return {
+          musicPlaylists: s.musicPlaylists.map((p) => (p.id === id ? { ...p, name: safe } : p)),
+        };
+      }),
+      deleteMusicPlaylist: (id) => set((s) => {
+        if (s.musicPlaylists.length <= 1) return s;
+        const next = s.musicPlaylists.filter((p) => p.id !== id);
+        return { musicPlaylists: next, currentPlaylistId: s.currentPlaylistId === id ? next[0].id : s.currentPlaylistId };
+      }),
+      setCurrentPlaylist: (id) => set({ currentPlaylistId: id }),
+      addSourceToPlaylist: (playlistId, sourceId) => set((s) => ({
+        musicPlaylists: s.musicPlaylists.map((p) =>
+          p.id === playlistId && !p.sourceIds.includes(sourceId)
+            ? { ...p, sourceIds: [sourceId, ...p.sourceIds] }
+            : p
+        ),
+      })),
+      removeSourceFromPlaylist: (playlistId, sourceId) => set((s) => ({
+        musicPlaylists: s.musicPlaylists.map((p) =>
+          p.id === playlistId ? { ...p, sourceIds: p.sourceIds.filter((id) => id !== sourceId) } : p
+        ),
+      })),
+      playNextPlaylistSource: () => set((s) => {
+        const nextId = pickPlaylistSourceId(s, 1);
+        if (!nextId) return s;
+        return {
+          music: {
+            ...s.music,
+            currentSourceId: nextId,
+            progressCurrentSec: 0,
+            progressDurationSec: 0,
+          },
+        };
+      }),
+      playPrevPlaylistSource: () => set((s) => {
+        const nextId = pickPlaylistSourceId(s, -1);
+        if (!nextId) return s;
+        return {
+          music: {
+            ...s.music,
+            currentSourceId: nextId,
+            progressCurrentSec: 0,
+            progressDurationSec: 0,
+          },
+        };
+      }),
+      setMotto: (val) => set({ motto: val }),
 
       exportData: () => JSON.stringify(get()),
       importData: (json) => {
@@ -408,7 +695,7 @@ export const useStore = create<AppState>()(
     {
       name: 'study-quest-v3',
       storage: createJSONStorage(() => singleFileStorage),
-      version: 4,
+      version: 7,
       partialize: (state) => ({
         user: state.user,
         energy: state.energy,
@@ -437,6 +724,10 @@ export const useStore = create<AppState>()(
         settingsProfile: state.settingsProfile,
         shortcuts: state.shortcuts,
         focusTemplates: state.focusTemplates,
+        music: state.music,
+        musicPlaylists: state.musicPlaylists,
+        currentPlaylistId: state.currentPlaylistId,
+        motto: state.motto,
       }),
       migrate: (persisted: any) => {
         const base = persisted?.state ? persisted.state : persisted;
@@ -458,6 +749,29 @@ export const useStore = create<AppState>()(
           settingsProfile: { ...INITIAL_DEFAULTS.settingsProfile, ...(base?.settingsProfile || {}) },
           shortcuts: { ...INITIAL_DEFAULTS.shortcuts, ...(base?.shortcuts || {}) },
           focusTemplates: base?.focusTemplates || INITIAL_DEFAULTS.focusTemplates,
+          tasks: (base?.tasks || []).map((t: any) => ({
+            ...t,
+            updatedAt: t.updatedAt || t.createdAt || new Date().toISOString(),
+            completedAt: t.completedAt || (t.isCompleted ? new Date().toISOString() : ''),
+            description: t.description || '',
+          })),
+          music: {
+            ...INITIAL_DEFAULTS.music,
+            ...(base?.music || {}),
+            playbackMode: base?.music?.playbackMode || 'playlist',
+            library: (base?.music?.library || []).map((m: any) => ({
+              ...m,
+              mediaKind: m.mediaKind || (['bilibili', 'youtube', 'netease'].includes(m.type) ? 'embed' : 'audio'),
+              durationSec: Number.isFinite(Number(m.durationSec)) ? Number(m.durationSec) : undefined,
+            })),
+          },
+          musicPlaylists: (base?.musicPlaylists || INITIAL_DEFAULTS.musicPlaylists).map((p: any) => ({
+            ...p,
+            sourceIds: Array.isArray(p.sourceIds) ? p.sourceIds : [],
+          })),
+          focusSessionState: 'idle',
+          currentPlaylistId: base?.currentPlaylistId || base?.musicPlaylists?.[0]?.id || INITIAL_DEFAULTS.currentPlaylistId,
+          motto: base?.motto || INITIAL_DEFAULTS.motto,
         };
       },
     }
