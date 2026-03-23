@@ -20,11 +20,11 @@ const appendQuery = (url: string, key: string, value: string) => {
 };
 
 export default function GlobalMusicHost() {
-  const { music, focusSessionState, setMusicProgress } = useStore();
+  const { music, setMusicProgress } = useStore();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [embedTick, setEmbedTick] = useState(0);
 
-  const focusShouldPlay = focusSessionState === 'active' && music.isPlaying;
+  const focusShouldPlay = music.isPlaying;
 
   const currentSource = useMemo(
     () => music.library.find((item) => item.id === music.currentSourceId) || null,

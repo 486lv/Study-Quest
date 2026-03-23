@@ -21,6 +21,38 @@ type MetaInfo = {
   durationSec?: number;
 };
 
+const parseBiliIds = (url: string) => {
+  const bvid = url.match(/BV[0-9A-Za-z]+/i)?.[0];
+  const aid = url.match(/(?:av)(\d+)/i)?.[1];
+  return { bvid, aid };
+};
+
+const fetchJsonp = <T,>(url: string, timeoutMs = 6000): Promise<T | null> =>
+  new Promise((resolve) => {
+    if (typeof window === 'undefined') return resolve(null);
+    const cb = `__sq_cb_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const script = document.createElement('script');
+    const timer = window.setTimeout(() => {
+      try { delete (window as any)[cb]; } catch {}
+      script.remove();
+      resolve(null);
+    }, timeoutMs);
+    (window as any)[cb] = (data: T) => {
+      window.clearTimeout(timer);
+      try { delete (window as any)[cb]; } catch {}
+      script.remove();
+      resolve(data);
+    };
+    script.src = `${url}${url.includes('?') ? '&' : '?'}jsonp=jsonp&callback=${cb}`;
+    script.onerror = () => {
+      window.clearTimeout(timer);
+      try { delete (window as any)[cb]; } catch {}
+      script.remove();
+      resolve(null);
+    };
+    document.body.appendChild(script);
+  });
+
 const buildBiliEmbed = (id: { bvid?: string; aid?: string }) => {
   if (id.bvid) return `https://player.bilibili.com/player.html?bvid=${id.bvid}&page=1&high_quality=1&as_wide=1`;
   if (id.aid) return `https://player.bilibili.com/player.html?aid=${id.aid}&page=1&high_quality=1&as_wide=1`;
@@ -74,8 +106,26 @@ const fetchMediaMeta = async (url: string): Promise<MetaInfo | null> => {
     try {
       const viaIpc = await window.electronAPI.fetchMediaMeta(url);
       if (viaIpc?.ok) return viaIpc as MetaInfo;
-    } catch {
-      return null;
+    } catch {}
+  }
+
+  if (/bilibili\.com|b23\.tv/i.test(url)) {
+    const { bvid, aid } = parseBiliIds(url);
+    if (bvid || aid) {
+      const api = bvid
+        ? `https://api.bilibili.com/x/web-interface/view?bvid=${encodeURIComponent(bvid)}`
+        : `https://api.bilibili.com/x/web-interface/view?aid=${encodeURIComponent(aid || '')}`;
+      const payload = await fetchJsonp<any>(api);
+      const data = payload?.data;
+      if (payload?.code === 0 && data) {
+        return {
+          ok: true,
+          title: String(data.title || '').trim(),
+          bvid: String(data.bvid || bvid || ''),
+          aid: data.aid ? String(data.aid) : aid,
+          durationSec: Number(data.duration) || undefined,
+        };
+      }
     }
   }
   return null;
@@ -92,9 +142,20 @@ const resolveMediaForSubmit = async (parsed: ParsedMedia): Promise<ParsedMedia> 
 const detectTitleFromLink = async (parsed: ParsedMedia) => {
   const meta = await fetchMediaMeta(parsed.raw);
   if (meta?.ok && meta.title) return meta.title;
+  if (parsed.type === 'bilibili') {
+    const bvid = parsed.raw.match(/BV[0-9A-Za-z]+/i)?.[0];
+    if (bvid) return bvid.toUpperCase();
+  }
   try {
     const u = new URL(parsed.raw);
-    return decodeURIComponent(u.pathname.split('/').pop() || '').replace(/\.[a-z0-9]+$/i, '');
+    const seg = decodeURIComponent(
+      u.pathname
+        .split('/')
+        .filter(Boolean)
+        .pop() || ''
+    ).replace(/\.[a-z0-9]+$/i, '');
+    if (seg) return seg;
+    return (u.searchParams.get('title') || u.searchParams.get('name') || '').trim();
   } catch {
     return '';
   }
